@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRON FRONT</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="iron-front">
+    <header>
+      <h1>IRON FRONT</h1>
+      <span>🪙 <b id="coins">0</b> moedas</span>
+    </header>
+
+    <section id="menu" class="panel">
+      <h2>ESCOLHA O MODO</h2>
+      <div class="modes">
+        <button data-mode="ATAQUE">ATAQUE</button>
+        <button data-mode="AVANÇO">AVANÇO</button>
+        <button data-mode="DEFESA">DEFESA</button>
+        <button data-mode="SOBREVIVÊNCIA">SOBREVIVÊNCIA</button>
+        <button data-mode="BATTLE ROYALE">BATTLE ROYALE</button>
+      </div>
+      <button id="play">JOGAR</button>
+      <button id="shop">LOJA</button>
+    </section>
+
+    <section id="store" class="panel hidden">
+      <h2>LOJA DE ARMAS</h2>
+      <div id="weapons"></div>
+      <button id="back">VOLTAR</button>
+    </section>
+
+    <section id="game" class="hidden">
+      <div class="hud">
+        <span id="modeLabel">ATAQUE</span>
+        <span>FASE <b id="level">1</b></span>
+        <span>❤️ <b id="hp">100</b></span>
+        <span>🔫 <b id="ammo">12</b></span>
+      </div>
+
+      <canvas id="screen" width="800" height="450"></canvas>
+
+      <div class="hud">
+        <span>Inimigos: <b id="remaining">0</b></span>
+        <span>Base: <b id="basehp">100</b></span>
+        <span id="weaponLabel">Pistola</span>
+      </div>
+
+      <div class="controls">
+        <button id="jump" class="hidden">PULAR DO ÔNIBUS</button>
+        <button id="reload">RECARREGAR</button>
+        <button id="pause">PAUSAR</button>
+        <button id="quit">SAIR</button>
+      </div>
+      <p>WASD: andar | Mouse: mirar e atirar | R: recarregar | ESC: pausar</p>
+    </section>
+
+    <p id="message">Prepare-se para a missão.</p>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
