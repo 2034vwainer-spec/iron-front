@@ -1,0 +1,19 @@
+#game {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#message {
+  text-align: center;
+  color: #b6c4b8;
+}
+
+p {
+  color: #b6c4b8;
+  font-size: 12px;
+}
