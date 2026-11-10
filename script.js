@@ -22,6 +22,7 @@ $('play').onclick=start;$('jump').onclick=()=>{spawn(14);launch();say('BATTLE RO
 $('quit').onclick=()=>{playing=false;mouseDown=false;show('menu');say('MISSION ENDED')};
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
 function reload(){let n=Math.min(gun().clip-ammo,reserve);ammo+=n;reserve-=n;hud()}$('reload').onclick=reload;
+$('autoAim').addEventListener('change',()=>say($('autoAim').checked?'AUTO AIM OPTION: ON':'AUTO AIM OPTION: OFF'));
 window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='r')reload();if(e.key==='Escape'&&playing)$('pause').click()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 let lastMouseX=null;canvas.addEventListener('pointermove',e=>{let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*canvas.width/r.width;if(lastMouseX!==null)player.a+=(x-lastMouseX)/canvas.width*2.1;lastMouseX=x});canvas.addEventListener('pointerleave',()=>lastMouseX=null);
 canvas.addEventListener('pointerdown',e=>{if(e.button===2){mouseDown=true;canvas.setPointerCapture(e.pointerId);fire()}});window.addEventListener('pointerup',()=>mouseDown=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());
