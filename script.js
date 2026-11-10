@@ -1,287 +1,34 @@
-(() => {
-  "use strict";
-
-  const $ = (id) => document.getElementById(id);
-  const panels = ["menu", "shop", "bus", "game"];
-  const state = {
-    mode: "ATTACK", screen: "menu", credits: 0, hp: 100, wave: 1,
-    ammo: 12, reserve: 36, weapon: "PISTOL", armor: "NONE",
-    paused: false, running: false, last: 0, spawn: 0, score: 0,
-    player: { x: 0, y: 0, angle: 0, speed: 190 },
-    keys: {}, mouse: { x: 450, y: 260, down: false },
-    enemies: [], bullets: [], particles: [], baseHp: 100,
-    shopType: "weapons", jumping: false, waveTimer: 0
-  };
-
-  const canvas = $("screen");
-  const ctx = canvas.getContext("2d");
-  const weapons = [
-    { name: "PISTOL", price: 0, damage: 25, rate: 0.32, mag: 12, reserve: 36, description: "Standard sidearm. Free starter weapon." },
-    { name: "AK-47", price: 500, damage: 34, rate: 0.19, mag: 30, reserve: 90, description: "Reliable automatic rifle." },
-    { name: "DESERT EAGLE", price: 700, damage: 58, rate: 0.48, mag: 7, reserve: 35, description: "Powerful semi-automatic pistol." },
-    { name: "MACHINE GUN", price: 1200, damage: 22, rate: 0.085, mag: 100, reserve: 300, description: "Best sustained-fire weapon. 100% durability." }
-  ];
-  const armors = [
-    { name: "LIGHT ARMOR", price: 250, protection: 0.15, description: "Light protection. Adds 15% damage reduction." },
-    { name: "REINFORCED ARMOR", price: 600, protection: 0.30, description: "Reinforced protection. Adds 30% damage reduction." },
-    { name: "HEAVY ARMOR", price: 1000, protection: 0.45, description: "Maximum protection. Adds 45% damage reduction." }
-  ];
-  let lastShot = 0;
-  let currentWeapon = weapons[0];
-
-  function message(text) { $("message").textContent = text; }
-  function showPanel(name) {
-    panels.forEach(id => $(id).classList.toggle("hidden", id !== name));
-    state.screen = name;
-  }
-  function updateHud() {
-    $("coins").textContent = state.credits;
-    $("gameCoins").textContent = state.credits;
-    $("hp").textContent = Math.max(0, Math.ceil(state.hp));
-    $("ammo").textContent = state.ammo + "/" + state.reserve;
-    $("level").textContent = state.wave;
-    $("modeLabel").textContent = state.mode;
-  }
-  function selectMode(mode) {
-    state.mode = mode;
-    document.querySelectorAll(".mode").forEach(b => b.classList.toggle("selected", b.dataset.mode === mode));
-    message(mode + " SELECTED");
-  }
-  document.querySelectorAll(".mode").forEach(b => b.addEventListener("click", () => selectMode(b.dataset.mode)));
-
-  function openShop(type) {
-    state.shopType = type;
-    $("shopTitle").textContent = type === "weapons" ? "WEAPON ARMORY" : "ARMOR SHOP";
-    renderShop();
-    showPanel("shop");
-  }
-  function renderShop() {
-    const list = state.shopType === "weapons" ? weapons : armors;
-    $("items").innerHTML = "";
-    list.forEach(item => {
-      const owned = state.shopType === "weapons" ? (item.name === "PISTOL" || item.name === state.weapon) : item.name === state.armor;
-      const card = document.createElement("article");
-      card.className = "item";
-      const title = document.createElement("h3"); title.textContent = item.name;
-      const desc = document.createElement("p"); desc.textContent = item.description;
-      const price = document.createElement("div"); price.className = "price"; price.textContent = item.price === 0 ? "FREE" : item.price + " CREDITS";
-      const btn = document.createElement("button");
-      btn.textContent = owned ? "EQUIPPED" : (item.price === 0 ? "EQUIP" : "BUY / EQUIP");
-      btn.disabled = owned;
-      btn.addEventListener("click", () => {
-        if (state.credits < item.price) { message("NOT ENOUGH CREDITS"); return; }
-        state.credits -= item.price;
-        if (state.shopType === "weapons") {
-          state.weapon = item.name; currentWeapon = item;
-          state.ammo = item.mag; state.reserve = item.reserve;
-          message(item.name + " EQUIPPED");
-        } else {
-          state.armor = item.name;
-          message(item.name + " EQUIPPED");
-        }
-        updateHud(); renderShop();
-      });
-      card.append(title, desc, price, btn);
-      $("items").appendChild(card);
-    });
-  }
-  $("weapons").addEventListener("click", () => openShop("weapons"));
-  $("armor").addEventListener("click", () => openShop("armor"));
-  $("back").addEventListener("click", () => showPanel("menu"));
-
-  function deploy() {
-    if (state.mode === "BATTLE ROYALE") { showPanel("bus"); return; }
-    startGame();
-  }
-  $("play").addEventListener("click", deploy);
-  $("jump").addEventListener("click", () => { state.jumping = true; startGame(); message("INSERTION COMPLETE — GOOD LUCK"); });
-
-  function startGame() {
-    state.hp = 100; state.wave = 1; state.score = 0; state.baseHp = 100;
-    state.ammo = currentWeapon.mag; state.reserve = currentWeapon.reserve;
-    state.enemies = []; state.bullets = []; state.particles = [];
-    state.player.x = 0; state.player.y = 0; state.player.angle = 0;
-    state.spawn = 0; state.paused = false; state.running = true;
-    state.last = performance.now();
-    showPanel("game"); updateHud(); spawnWave(); requestAnimationFrame(loop);
-  }
-  function spawnWave() {
-    const count = Math.min(3 + state.wave * 2, 18);
-    for (let i = 0; i < count; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = 380 + Math.random() * 230;
-      state.enemies.push({
-        x: Math.cos(a) * d, y: Math.sin(a) * d,
-        hp: 55 + state.wave * 9, maxHp: 55 + state.wave * 9,
-        speed: 48 + Math.min(state.wave * 2, 35),
-        size: 22 + Math.random() * 5, boss: false, hit: 0
-      });
-    }
-    if (state.wave % 3 === 0 || state.mode === "SURVIVAL" && state.wave % 2 === 0) {
-      state.enemies.push({ x: 0, y: -480, hp: 420 + state.wave * 55, maxHp: 420 + state.wave * 55, speed: 34, size: 42, boss: true, hit: 0 });
-    }
-    message("WAVE " + state.wave + " — STAY ALERT");
-  }
-  function reload() {
-    const need = currentWeapon.mag - state.ammo;
-    const take = Math.min(need, state.reserve);
-    if (take > 0) { state.ammo += take; state.reserve -= take; updateHud(); message("RELOADED"); }
-    else message("NO RESERVE AMMO");
-  }
-  $("reload").addEventListener("click", reload);
-  $("pause").addEventListener("click", () => {
-    state.paused = !state.paused;
-    $("pause").textContent = state.paused ? "RESUME" : "PAUSE";
-    message(state.paused ? "MISSION PAUSED" : "MISSION RESUMED");
-    if (!state.paused) { state.last = performance.now(); requestAnimationFrame(loop); }
-  });
-  $("quit").addEventListener("click", () => { state.running = false; showPanel("menu"); message("MISSION ENDED"); });
-  $("autoAim").addEventListener("change", () => message("AIM ASSIST " + ($("autoAim").checked ? "ON" : "OFF")));
-
-  window.addEventListener("keydown", e => {
-    state.keys[e.key.toLowerCase()] = true;
-    if (e.key.toLowerCase() === "r" && state.screen === "game") reload();
-    if (["w","a","s","d"," "].includes(e.key.toLowerCase())) e.preventDefault();
-  });
-  window.addEventListener("keyup", e => state.keys[e.key.toLowerCase()] = false);
-  canvas.addEventListener("mousemove", e => {
-    const r = canvas.getBoundingClientRect();
-    state.mouse.x = (e.clientX - r.left) * canvas.width / r.width;
-    state.mouse.y = (e.clientY - r.top) * canvas.height / r.height;
-  });
-  canvas.addEventListener("mousedown", e => { if (e.button === 2) state.mouse.down = true; });
-  window.addEventListener("mouseup", () => state.mouse.down = false);
-  canvas.addEventListener("contextmenu", e => e.preventDefault());
-
-  function shoot(now) {
-    if (!state.mouse.down || now - lastShot < currentWeapon.rate * 1000) return;
-    if (state.ammo <= 0) { message("OUT OF AMMO — PRESS R"); return; }
-    lastShot = now; state.ammo--;
-    const targetX = state.mouse.x - canvas.width / 2;
-    const targetY = state.mouse.y - canvas.height / 2;
-    let target = null;
-    if ($("autoAim").checked && state.enemies.length) {
-      target = state.enemies.reduce((best, en) => {
-        const d = Math.hypot(en.x - state.player.x, en.y - state.player.y);
-        return d < 620 && (!best || d < best.d) ? { en, d } : best;
-      }, null)?.en || null;
-    }
-    let dx, dy;
-    if (target) { dx = target.x - state.player.x; dy = target.y - state.player.y; }
-    else { dx = targetX; dy = targetY; }
-    const len = Math.hypot(dx, dy) || 1;
-    const angle = Math.atan2(dy, dx);
-    state.player.angle = angle;
-    state.bullets.push({ x: state.player.x, y: state.player.y, vx: Math.cos(angle) * 760, vy: Math.sin(angle) * 760, life: 0.75, damage: currentWeapon.damage });
-    state.particles.push({ x: state.player.x + Math.cos(angle)*25, y: state.player.y + Math.sin(angle)*25, life: .08, max: .08, color: "#f5d27a" });
-    updateHud();
-  }
-  function damagePlayer(amount) {
-    const armor = armors.find(a => a.name === state.armor);
-    state.hp -= amount * (1 - (armor ? armor.protection : 0));
-    if (state.hp <= 0) {
-      state.hp = 0; state.running = false; updateHud();
-      message("MISSION FAILED — TRY AGAIN");
-      setTimeout(() => showPanel("menu"), 1100);
-    }
-  }
-  function update(dt, now) {
-    const p = state.player;
-    let mx = 0, my = 0;
-    if (state.keys.w) my--; if (state.keys.s) my++;
-    if (state.keys.a) mx--; if (state.keys.d) mx++;
-    const mag = Math.hypot(mx,my) || 1;
-    const speed = p.speed * (state.keys.shift ? 1.45 : 1);
-    p.x += mx / mag * speed * dt; p.y += my / mag * speed * dt;
-    shoot(now);
-
-    state.bullets.forEach(b => {
-      b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
-      for (const en of state.enemies) {
-        if (en.hp > 0 && Math.hypot(en.x-b.x,en.y-b.y) < en.size * .8) {
-          en.hp -= b.damage; en.hit = .12; b.life = 0;
-          if (en.hp <= 0) {
-            state.credits += en.boss ? 500 : 100;
-            state.score += en.boss ? 500 : 100;
-            message((en.boss ? "BOSS" : "ENEMY") + " DEFEATED + " + (en.boss ? 500 : 100) + " CREDITS");
-            updateHud();
-          }
-          break;
-        }
-      }
-    });
-    state.bullets = state.bullets.filter(b => b.life > 0);
-    state.enemies.forEach(en => {
-      if (en.hp <= 0) return;
-      en.hit = Math.max(0,en.hit-dt);
-      const dx = p.x-en.x, dy = p.y-en.y, d = Math.hypot(dx,dy)||1;
-      if (state.mode === "DEFENSE") {
-        const baseDist = Math.hypot(en.x,en.y);
-        if (baseDist > 95) { en.x += en.x / baseDist * en.speed * dt; en.y += en.y / baseDist * en.speed * dt; }
-        else { state.baseHp -= 4*dt; }
-      } else {
-        en.x += dx/d * en.speed * dt; en.y += dy/d * en.speed * dt;
-      }
-      if (d < en.size + 20) { en.attackTimer = (en.attackTimer || 0) - dt; if (en.attackTimer <= 0) { damagePlayer(en.boss ? 13 : 7); en.attackTimer = .85; } }
-    });
-    state.enemies = state.enemies.filter(e => e.hp > 0);
-    if (state.mode === "DEFENSE" && state.baseHp <= 0) { state.running = false; message("BASE LOST — MISSION FAILED"); setTimeout(()=>showPanel("menu"),1200); }
-    if (state.enemies.length === 0) {
-      state.waveTimer += dt;
-      if (state.waveTimer > 2.2) { state.wave++; state.waveTimer = 0; spawnWave(); }
-    } else state.waveTimer = 0;
-    state.particles.forEach(a => a.life -= dt);
-    state.particles = state.particles.filter(a => a.life > 0);
-    updateHud();
-  }
-  function drawEnemy(en, cx, cy) {
-    const x = cx + en.x - state.player.x, y = cy + en.y - state.player.y;
-    const s = en.size;
-    ctx.save(); ctx.translate(x,y);
-    ctx.fillStyle = "#0008"; ctx.beginPath(); ctx.ellipse(0,s*.72,s*.65,s*.22,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = en.boss ? "#313b2b" : "#526047"; ctx.fillRect(-s*.42,-s*.15,s*.84,s*.85);
-    ctx.fillStyle = "#27332a"; ctx.fillRect(-s*.48,-s*.05,s*.96,s*.34);
-    ctx.fillStyle = "#b5a17d"; ctx.beginPath(); ctx.arc(0,-s*.42,s*.29,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = "#26352c"; ctx.fillRect(-s*.32,-s*.7,s*.64,s*.2);
-    ctx.fillStyle = "#171f1a"; ctx.fillRect(-s*.42,s*.57,s*.32,s*.22); ctx.fillRect(s*.1,s*.57,s*.32,s*.22);
-    if (en.boss) { ctx.strokeStyle="#d6ae55"; ctx.lineWidth=3; ctx.strokeRect(-s*.58,-s*.78,s*1.16,s*1.75); }
-    ctx.fillStyle="#151b18"; ctx.fillRect(-s*.34,-s*1.12,s*.68,4);
-    ctx.fillStyle="#d45b4c"; ctx.fillRect(-s*.34,-s*1.12,s*.68*Math.max(0,en.hp/en.maxHp),4);
-    ctx.restore();
-  }
-  function draw() {
-    const w=canvas.width,h=canvas.height,cx=w/2,cy=h/2;
-    ctx.clearRect(0,0,w,h);
-    ctx.fillStyle="#26362c"; ctx.fillRect(0,0,w,h);
-    const offX = (state.player.x%80), offY=(state.player.y%80);
-    ctx.strokeStyle="#52614a"; ctx.lineWidth=1;
-    for(let x=-80-offX;x<w+80;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
-    for(let y=-80-offY;y<h+80;y+=80){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
-    ctx.fillStyle="#35463a"; ctx.fillRect(cx-85,cy-85,170,170);
-    ctx.strokeStyle="#75816a"; ctx.strokeRect(cx-85,cy-85,170,170);
-    if(state.mode==="DEFENSE"){
-      ctx.fillStyle="#69725c";ctx.fillRect(cx-55,cy-48,110,96);
-      ctx.fillStyle="#c1a66b";ctx.fillRect(cx-23,cy-60,46,20);
-      ctx.fillStyle="#18231e";ctx.font="bold 11px monospace";ctx.fillText("BASE "+Math.max(0,Math.ceil(state.baseHp))+"%",cx-39,cy+5);
-    }
-    state.enemies.forEach(en=>drawEnemy(en,cx,cy));
-    state.bullets.forEach(b=>{const x=cx+b.x-state.player.x,y=cy+b.y-state.player.y;ctx.fillStyle="#f4d16e";ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});
-    state.particles.forEach(a=>{ctx.globalAlpha=a.life/a.max;ctx.fillStyle=a.color;ctx.beginPath();ctx.arc(cx+a.x-state.player.x,cy+a.y-state.player.y,5,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;});
-    ctx.save();ctx.translate(cx,cy);ctx.rotate(state.player.angle);
-    ctx.fillStyle="#111b17";ctx.fillRect(-17,-13,34,26);
-    ctx.fillStyle="#87916c";ctx.fillRect(-11,-10,22,20);
-    ctx.fillStyle="#18231d";ctx.fillRect(4,-4,27,8);
-    ctx.restore();
-    ctx.strokeStyle="#f2e2a4";ctx.lineWidth=1;ctx.beginPath();ctx.arc(state.mouse.x,state.mouse.y,10,0,Math.PI*2);ctx.moveTo(state.mouse.x-15,state.mouse.y);ctx.lineTo(state.mouse.x-5,state.mouse.y);ctx.moveTo(state.mouse.x+5,state.mouse.y);ctx.lineTo(state.mouse.x+15,state.mouse.y);ctx.moveTo(state.mouse.x,state.mouse.y-15);ctx.lineTo(state.mouse.x,state.mouse.y-5);ctx.moveTo(state.mouse.x,state.mouse.y+5);ctx.lineTo(state.mouse.x,state.mouse.y+15);ctx.stroke();
-    ctx.fillStyle="#e7e8d6";ctx.font="11px monospace";ctx.fillText("SCORE "+state.score,14,20);
-  }
-  function loop(now) {
-    if(!state.running || state.paused) return;
-    const dt=Math.min((now-state.last)/1000,.035);state.last=now;
-    update(dt,now);draw();
-    if(state.running&&!state.paused)requestAnimationFrame(loop);
-  }
-  updateHud();
-  showPanel("menu");
-  message("SYSTEM READY — SELECT YOUR OPERATION");
+(()=>{'use strict';
+const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext('2d');
+let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,mouseDown=false,keys={},enemies=[],player={x:2.5,y:2.5,a:0},baseHp=100;
+const guns=[{name:'PISTOL',cost:0,damage:25,clip:12,rate:330},{name:'AK-47',cost:650,damage:22,clip:30,rate:125},{name:'DESERT EAGLE',cost:900,damage:60,clip:7,rate:470},{name:'MACHINE GUN',cost:1600,damage:18,clip:100,rate:65}];
+const vests=[{name:'LIGHT VEST',cost:300,protection:15},{name:'REINFORCED VEST',cost:700,protection:30},{name:'HEAVY ARMOR',cost:1200,protection:50}];
+let owned=['PISTOL'];
+const map=['1111111111111111','1000000000000001','1000100001000001','1000100001000001','1000000000000001','1011000100110001','1000000000000001','1000010000100001','1000010000100001','1000000000000001','1001000000010001','1001000000010001','1000000000000001','1000110001100001','1000000000000001','1111111111111111'];
+const gun=()=>guns.find(g=>g.name===weapon);
+function show(id){['menu','shop','game','bus'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function say(s){$('message').textContent=s}
+function hud(){$('coins').textContent=coins;$('gameCoins').textContent=coins;$('level').textContent=level;$('hp').textContent=Math.max(0,Math.ceil(hp));$('ammo').textContent=ammo+'/'+reserve}
+function wall(x,y){let a=Math.floor(x),b=Math.floor(y);return b<0||b>=16||a<0||a>=16||map[b][a]==='1'}
+function free(x,y,r=.18){return !wall(x-r,y-r)&&!wall(x+r,y-r)&&!wall(x-r,y+r)&&!wall(x+r,y+r)}
+function blocked(x1,y1,x2,y2){let d=Math.hypot(x2-x1,y2-y1),n=Math.ceil(d*12);for(let i=1;i<n;i++){let t=i/n;if(wall(x1+(x2-x1)*t,y1+(y2-y1)*t))return true}return false}
+function openShop(type){$('shopTitle').textContent=type==='WEAPON'?'WEAPON ARMORY':'ARMOR SHOP';let arr=type==='WEAPON'?guns:vests;$('items').innerHTML='';arr.forEach(it=>{let el=document.createElement('article');el.className='item';let desc=type==='WEAPON'?it.damage+' damage · '+it.clip+' round magazine · 100% durability':'Damage reduction: '+it.protection+'%';let has=type==='WEAPON'?owned.includes(it.name):armor===it.protection;el.innerHTML='<h3>'+it.name+'</h3><p>'+desc+'</p><div class="price">'+(it.cost===0?'FREE':it.cost+' CREDITS')+'</div>';let b=document.createElement('button');b.textContent=has?'EQUIPPED':type==='WEAPON'?'BUY / EQUIP':'BUY / EQUIP';b.onclick=()=>{if(has){say('Already equipped.');return}if(coins<it.cost){say('NOT ENOUGH CREDITS');return}coins-=it.cost;if(type==='WEAPON'){owned.push(it.name);weapon=it.name;ammo=it.clip;reserve=it.clip*3}else armor=it.protection;hud();say(it.name+' EQUIPPED');openShop(type)};el.append(b);$('items').append(el)});show('shop');hud()}
+$('weapons').onclick=()=>openShop('WEAPON');$('armor').onclick=()=>openShop('ARMOR');$('back').onclick=()=>show('menu');
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('selected',x===b));say('SELECTED OPERATION: '+mode)});
+function spawn(n){enemies=[];for(let i=0;i<n;i++){let x=12.4-(i%3)*1.1,y=2.5+Math.floor(i/3)*2.2,boss=(level===1||level%3===0)&&i===0;enemies.push({x,y,hp:boss?260+level*35:55+level*12,max:boss?260+level*35:55+level*12,boss,speed:boss?.48:.65+level*.025,hit:0})}}
+function start(){level=1;hp=100;baseHp=100;player={x:2.5,y:2.5,a:0};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(mode==='SURVIVAL'?8:5);launch()}
+function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=mode;last=performance.now();hud();say('MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
+$('play').onclick=start;$('jump').onclick=()=>{spawn(14);launch();say('BATTLE ROYALE — SURVIVE THE DROP')};
+$('quit').onclick=()=>{playing=false;mouseDown=false;show('menu');say('MISSION ENDED')};
+$('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
+function reload(){let n=Math.min(gun().clip-ammo,reserve);ammo+=n;reserve-=n;hud()}$('reload').onclick=reload;
+window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='r')reload();if(e.key==='Escape'&&playing)$('pause').click()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+let lastMouseX=null;canvas.addEventListener('pointermove',e=>{let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*canvas.width/r.width;if(lastMouseX!==null)player.a+=(x-lastMouseX)/canvas.width*2.1;lastMouseX=x});canvas.addEventListener('pointerleave',()=>lastMouseX=null);
+canvas.addEventListener('pointerdown',e=>{if(e.button===2){mouseDown=true;canvas.setPointerCapture(e.pointerId);fire()}});window.addEventListener('pointerup',()=>mouseDown=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+function fire(){let now=performance.now();if(!playing||paused||now-lastShot<gun().rate)return;lastShot=now;if(ammo<=0){say('RELOAD YOUR WEAPON');return}ammo--;let candidates=enemies.map(e=>({e,d:Math.hypot(e.x-player.x,e.y-player.y),a:Math.atan2(e.y-player.y,e.x-player.x)})).filter(o=>o.d<14&&!blocked(player.x,player.y,o.e.x,o.e.y));let target=null;if($('autoAim').checked){candidates.sort((a,b)=>a.d-b.d);target=candidates[0]?.e||null}else{let best=.12;candidates.forEach(o=>{let diff=Math.atan2(Math.sin(o.a-player.a),Math.cos(o.a-player.a));if(Math.abs(diff)<best){best=Math.abs(diff);target=o.e}})}if(target){target.hp-=gun().damage;if(target.hp<=0){coins+=target.boss?500:100;enemies=enemies.filter(e=>e!==target);say(target.boss?'BOSS ELIMINATED +500 CREDITS':'TARGET ELIMINATED +100 CREDITS');if(!enemies.length){level++;hp=Math.min(100,hp+15);spawn(Math.min(18,4+level*2));say('WAVE '+level+' — ENEMY REINFORCEMENTS')}}}hud()}
+function cast(a){let d=0;while(d<20){d+=.025;if(wall(player.x+Math.cos(a)*d,player.y+Math.sin(a)*d))break}return Math.max(.01,d*Math.cos(a-player.a))}
+function render(){let sky=ctx.createLinearGradient(0,0,0,260);sky.addColorStop(0,'#182c39');sky.addColorStop(1,'#87958b');ctx.fillStyle=sky;ctx.fillRect(0,0,900,260);let floor=ctx.createLinearGradient(0,260,0,520);floor.addColorStop(0,'#454a3d');floor.addColorStop(1,'#171e1b');ctx.fillStyle=floor;ctx.fillRect(0,260,900,260);let depth=[];for(let x=0;x<900;x+=2){let a=player.a+(x/900-.5)*1.25,d=cast(a);depth[x]=depth[x+1]=d;let h=Math.min(500,390/d),shade=Math.max(30,160-d*11);ctx.fillStyle='rgb('+Math.floor(shade*.72)+','+Math.floor(shade)+','+Math.floor(shade*.76)+')';ctx.fillRect(x,260-h/2,2,h)}[...enemies].sort((a,b)=>Math.hypot(b.x-player.x,b.y-player.y)-Math.hypot(a.x-player.x,a.y-player.y)).forEach(e=>{let dx=e.x-player.x,dy=e.y-player.y,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx)-player.a;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)>.66||d<.2)return;let sx=450+a/1.25*900;if(sx<0||sx>=900||d>depth[Math.floor(sx)]||blocked(player.x,player.y,e.x,e.y))return;let size=Math.min(230,360/d*(e.boss?1.4:1)),y=260-size*.55;ctx.fillStyle=e.boss?'#733b30':'#25362e';ctx.fillRect(sx-size*.23,y+size*.28,size*.46,size*.72);ctx.fillStyle='#b8a78c';ctx.beginPath();ctx.arc(sx,y+size*.17,size*.17,0,Math.PI*2);ctx.fill();ctx.fillStyle='#111';ctx.fillRect(sx-size*.3,y-12,size*.6,5);ctx.fillStyle='#d34b40';ctx.fillRect(sx-size*.3,y-12,size*.6*Math.max(0,e.hp/e.max),5);ctx.fillStyle='#fff';ctx.font='bold 11px monospace';if(e.boss)ctx.fillText('BOSS',sx-17,y-18)});ctx.strokeStyle='#f4e7c5';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(438,260);ctx.lineTo(462,260);ctx.moveTo(450,248);ctx.lineTo(450,272);ctx.stroke();if(mode==='DEFENSE'){ctx.fillStyle='#c7a75e';ctx.fillRect(360,345,180,35);ctx.fillStyle='#fff';ctx.font='12px monospace';ctx.fillText('YOUR BASE',414,367)}}
+function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}});if(hp<=0||baseHp<=0){playing=false;show('menu');say('MISSION FAILED — SELECT PLAY TO RETRY')}}
+function loop(now){if(!playing||paused)return;let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);if(mouseDown)fire();render();hud();requestAnimationFrame(loop)}
+hud();
 })();
