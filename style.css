@@ -274,20 +274,21 @@ canvas {
 .transport {
   position: absolute;
   left: 10%;
-  top: 58px;
+  top: 70px;
   width: 80%;
-  height: 88px;
-  background: linear-gradient(180deg,#667153 0%,#46533c 48%,#303b2d 49%,#263128 100%);
-  border: 3px solid #18251d;
-  border-radius: 12px 22px 10px 10px;
-  box-shadow: 0 13px 0 -5px #17211b, inset 0 5px 0 #89907155;
+  height: 65px;
+  background: repeating-linear-gradient(90deg,#354b3c 0 24px,#26372e 24px 30px);
+  border: 3px solid #17271e;
+  border-radius: 25px 45px 12px 12px;
+  box-shadow: 0 15px 0 -5px #19231f;
+  color: #d4d7c6;
+  font: 800 18px 'Barlow Condensed',sans-serif;
+  text-align: center;
+  padding-top: 20px;
   animation: fly 2s ease-in-out infinite;
 }
-.bus-windows { display:flex; gap:7px; position:absolute; left:12%; right:12%; top:12px; height:25px; }
-.bus-windows i { flex:1; background:linear-gradient(135deg,#9db4b0,#263a3b 65%); border:2px solid #202b25; border-radius:3px; }
-.transport strong { position:absolute; left:0; right:0; top:43px; color:#e1d4a4; font:800 15px 'Barlow Condensed',sans-serif; letter-spacing:3px; text-align:center; }
-.bus-wheels { position:absolute; left:12%; right:12%; bottom:-12px; display:flex; justify-content:space-between; }
-.bus-wheels i { width:27px; height:27px; border-radius:50%; background:radial-gradient(circle,#778078 0 22%,#111 25% 100%); border:3px solid #101713; }
+
+.transport span { background: #1a2924; padding: 5px 12px; }
 
 @keyframes drift { to { transform: translateX(850px); } }
 @keyframes fly { 50% { transform: translateY(-8px); } }
