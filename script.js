@@ -149,7 +149,7 @@
     state.mouse.x = (e.clientX - r.left) * canvas.width / r.width;
     state.mouse.y = (e.clientY - r.top) * canvas.height / r.height;
   });
-  canvas.addEventListener("mousedown", e => { if (e.button === 0) state.mouse.down = true; });
+  canvas.addEventListener("mousedown", e => { if (e.button === 2) state.mouse.down = true; });
   window.addEventListener("mouseup", () => state.mouse.down = false);
   canvas.addEventListener("contextmenu", e => e.preventDefault());
 
