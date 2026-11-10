@@ -1,64 +1,25 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IRON FRONT</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IRON FRONT</title><link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main id="iron-front">
-    <header>
-      <h1>IRON FRONT</h1>
-      <span>🪙 <b id="coins">0</b> moedas</span>
-    </header>
-
-    <section id="menu" class="panel">
-      <h2>ESCOLHA O MODO</h2>
-      <div class="modes">
-        <button data-mode="ATAQUE">ATAQUE</button>
-        <button data-mode="AVANÇO">AVANÇO</button>
-        <button data-mode="DEFESA">DEFESA</button>
-        <button data-mode="SOBREVIVÊNCIA">SOBREVIVÊNCIA</button>
-        <button data-mode="BATTLE ROYALE">BATTLE ROYALE</button>
-      </div>
-      <button id="play">JOGAR</button>
-      <button id="shop">LOJA</button>
-    </section>
-
-    <section id="store" class="panel hidden">
-      <h2>LOJA DE ARMAS</h2>
-      <div id="weapons"></div>
-      <button id="back">VOLTAR</button>
-    </section>
-
-    <section id="game" class="hidden">
-      <div class="hud">
-        <span id="modeLabel">ATAQUE</span>
-        <span>FASE <b id="level">1</b></span>
-        <span>❤️ <b id="hp">100</b></span>
-        <span>🔫 <b id="ammo">12</b></span>
-      </div>
-
-      <canvas id="screen" width="800" height="450"></canvas>
-
-      <div class="hud">
-        <span>Inimigos: <b id="remaining">0</b></span>
-        <span>Base: <b id="basehp">100</b></span>
-        <span id="weaponLabel">Pistola</span>
-      </div>
-
-      <div class="controls">
-        <button id="jump" class="hidden">PULAR DO ÔNIBUS</button>
-        <button id="reload">RECARREGAR</button>
-        <button id="pause">PAUSAR</button>
-        <button id="quit">SAIR</button>
-      </div>
-      <p>WASD: andar | Mouse: mirar e atirar | R: recarregar | ESC: pausar</p>
-    </section>
-
-    <p id="message">Prepare-se para a missão.</p>
-  </main>
-  <script src="script.js"></script>
-</body>
-</html>
+<main class="shell">
+<header class="top"><div><p class="eyebrow">TACTICAL COMBAT SIMULATION</p><h1>IRON <span>FRONT</span></h1></div><div class="wallet">CREDITS <b id="coins">0</b></div></header>
+<section id="menu" class="panel">
+<div class="hero"><div><p class="eyebrow">WELCOME, SOLDIER</p><h2>CHOOSE YOUR<br><span>MISSION</span></h2><p class="muted">Select a combat operation and prepare your loadout.</p></div><div class="hero-mark">IF<span>01</span></div></div>
+<h3>GAME MODES</h3><div class="modes">
+<button class="mode selected" data-mode="ATTACK"><b>01</b><span>ATTACK</span><small>Eliminate enemy forces</small></button>
+<button class="mode" data-mode="ADVANCE"><b>02</b><span>ADVANCE</span><small>Push through the map</small></button>
+<button class="mode" data-mode="DEFENSE"><b>03</b><span>DEFENSE</span><small>Protect your base</small></button>
+<button class="mode" data-mode="SURVIVAL"><b>04</b><span>SURVIVAL</span><small>Survive endless waves</small></button>
+<button class="mode battle" data-mode="BATTLE ROYALE"><b>05</b><span>BATTLE ROYALE</span><small>Hardest operation</small></button></div>
+<div class="actions"><button id="play" class="primary">DEPLOY <span>→</span></button><button id="weapons">WEAPON ARMORY</button><button id="armor">ARMOR SHOP</button></div>
+<p class="footnote">WASD move · Mouse aim · Hold left click to fire · R reload · Shift sprint</p>
+</section>
+<section id="shop" class="panel hidden"><div class="section-head"><div><p class="eyebrow">LOADOUT MANAGEMENT</p><h2 id="shopTitle">WEAPON ARMORY</h2></div><button id="back">← BACK</button></div><div id="items" class="items"></div></section>
+<section id="bus" class="panel hidden"><p class="eyebrow">BATTLE ROYALE / INSERTION</p><h2>DEPLOYMENT IN PROGRESS</h2><div class="bus-scene"><div class="cloud c1"></div><div class="cloud c2"></div><div class="transport">✈ <span>IRON FRONT</span></div></div><p class="muted">Jump into the combat zone. This is the hardest mode.</p><button id="jump" class="primary">JUMP INTO BATTLE ↓</button></section>
+<section id="game" class="panel hidden"><div class="gamebar"><b id="modeLabel">ATTACK</b><span>WAVE <b id="level">1</b></span><span>HEALTH <b id="hp">100</b></span><span>AMMO <b id="ammo">12/36</b></span><span>CREDITS <b id="gameCoins">0</b></span></div><canvas id="screen" width="900" height="520"></canvas><div class="gamecontrols"><button id="reload">RELOAD [R]</button><button id="pause">PAUSE</button><button id="quit">EXIT MISSION</button><label><input type="checkbox" id="autoAim" checked> AUTO AIM</label></div><p class="footnote">WASD move · Mouse move to aim · Hold left mouse button to shoot · Shift sprint · R reload</p></section>
+<div id="message" role="status">SYSTEM READY — SELECT YOUR OPERATION</div>
+</main><script src="script.js"></script></body></html>
