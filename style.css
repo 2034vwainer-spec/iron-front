@@ -159,6 +159,7 @@ button {
 }
 
 button:hover { filter: brightness(1.2); }
+button:focus-visible, input:focus-visible { outline: 2px solid #e1c16c; outline-offset: 2px; }
 
 button.primary {
   background: var(--gold);
@@ -229,8 +230,9 @@ canvas {
   width: 100%;
   height: auto;
   background: #1c2a25;
-  border: 1px solid #52645b;
-  border-radius: 5px;
+  border: 1px solid #68786b;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #0b120e, 0 12px 28px #0008;
   cursor: crosshair;
   touch-action: none;
 }
@@ -244,9 +246,28 @@ canvas {
 }
 
 .gamecontrols label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-size: 10px;
-  color: var(--muted);
-  margin-left: auto;
+  color: #c5d0c7;
+  margin-left: 0;
+  padding: 8px 10px;
+  border: 1px solid #35473e;
+  border-radius: 5px;
+  background: linear-gradient(180deg,#18251f,#0d1511);
+}
+.gamecontrols label:first-of-type { margin-left: auto; }
+.gamecontrols input[type="checkbox"] {
+  accent-color: #d5a847;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.gamecontrols label:has(input:checked) {
+  border-color: #8c7945;
+  color: #f0dfaa;
+  box-shadow: inset 0 0 0 1px #d5a84722;
 }
 
 .bus-scene {
@@ -309,6 +330,7 @@ canvas {
 }
 
 @media(max-width:760px) {
+  .gamecontrols label:first-of-type { margin-left: 0; }
   body { padding: 10px; }
   .panel { padding: 14px; }
   .modes { grid-template-columns: repeat(2,1fr); }
