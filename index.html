@@ -146,8 +146,26 @@
   <p class="footnote">WASD move · Mouse aim · AUTO FIRE shoots at locked targets · Shift sprint · R reload</p>
 </section>
 
+<section id="gameover" class="panel gameover-panel hidden">
+  <div class="gameover-content">
+    <p class="eyebrow">MISSION REPORT / FINAL STATUS</p>
+    <div class="gameover-symbol">×</div>
+    <h2>GAME <span>OVER</span></h2>
+    <p id="gameOverReason" class="gameover-reason">PLAYER DOWN</p>
+    <div class="gameover-stats">
+      <div><small>OPERATION</small><b id="gameOverMode">ATTACK</b></div>
+      <div><small>WAVE REACHED</small><b id="gameOverWave">1</b></div>
+      <div><small>CREDITS EARNED</small><b id="gameOverCredits">0</b></div>
+    </div>
+    <div class="gameover-actions">
+      <button id="retryGame" class="primary">TRY AGAIN ↻</button>
+      <button id="gameOverMenu">MAIN MENU</button>
+    </div>
+  </div>
+</section>
+
 <div id="message" role="status">SYSTEM READY — SELECT YOUR OPERATION</div>
 </main>
-<script src="script.js?v=progressive-waves-20261111"></script>
+<script src="script.js?v=game-over-screen-20261111"></script>
 </body>
 </html>
