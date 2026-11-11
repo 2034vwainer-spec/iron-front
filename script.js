@@ -43,6 +43,23 @@ function show(id){['menu','shop','game','bus'].forEach(x=>$(x).classList.toggle(
 function say(s){$('message').textContent=s}
 function hud(){$('coins').textContent=coins;$('gameCoins').textContent=coins;$('level').textContent=level;$('hp').textContent=Math.max(0,Math.ceil(hp));$('ammo').textContent=ammo+'/'+reserve}
 function wall(x,y){let a=Math.floor(x),b=Math.floor(y);return b<0||b>=map.length||a<0||a>=map[0].length||map[b][a]!=='0'}
+const scenery=[
+  {x:2.7,y:8.6,type:'lamp'},{x:21.2,y:8.7,type:'lamp'},
+  {x:3.3,y:14.5,type:'lamp'},{x:20.7,y:14.2,type:'lamp'},
+  {x:9.8,y:3.2,type:'tree'},{x:13.4,y:3.3,type:'tree'},
+  {x:9.7,y:20.8,type:'tree'},{x:13.7,y:20.8,type:'tree'},
+  {x:3.4,y:10.1,type:'barrel'},{x:3.8,y:10.8,type:'barrel'},
+  {x:20.4,y:10.1,type:'barrel'},{x:20.1,y:10.8,type:'barrel'},
+  {x:9.3,y:10.2,type:'crate'},{x:9.9,y:10.2,type:'crate'},
+  {x:14.1,y:13.7,type:'crate'},{x:15.0,y:13.7,type:'crate'},
+  {x:7.1,y:9.7,type:'barrier'},{x:16.8,y:14.8,type:'barrier'},
+  {x:5.2,y:10.0,type:'barrier'},{x:18.7,y:13.6,type:'barrier'},
+  {x:2.8,y:4.2,type:'bush'},{x:3.4,y:4.3,type:'bush'},
+  {x:20.3,y:4.3,type:'bush'},{x:21.0,y:4.2,type:'bush'},
+  {x:2.8,y:19.6,type:'bush'},{x:3.6,y:19.8,type:'bush'},
+  {x:20.4,y:19.5,type:'bush'},{x:21.0,y:19.6,type:'bush'},
+  {x:8.8,y:13.3,type:'crate'},{x:15.1,y:9.7,type:'crate'}
+].filter(p=>!wall(p.x,p.y));
 function free(x,y,r=.18){return !wall(x-r,y-r)&&!wall(x+r,y-r)&&!wall(x-r,y+r)&&!wall(x+r,y+r)}
 function blocked(x1,y1,x2,y2){let d=Math.hypot(x2-x1,y2-y1),n=Math.ceil(d*12);for(let i=1;i<n;i++){let t=i/n;if(wall(x1+(x2-x1)*t,y1+(y2-y1)*t))return true}return false}
 function openShop(type){$('shopTitle').textContent=type==='WEAPON'?'WEAPON ARMORY':'ARMOR SHOP';let arr=type==='WEAPON'?guns:vests;$('items').innerHTML='';arr.forEach(it=>{let el=document.createElement('article');el.className='item';let desc=type==='WEAPON'?it.damage+' damage · '+it.clip+' round magazine · 100% durability':'Damage reduction: '+it.protection+'%';let has=type==='WEAPON'?owned.includes(it.name):armor===it.protection;el.innerHTML='<h3>'+it.name+'</h3><p>'+desc+'</p><div class="price">'+(it.cost===0?'FREE':it.cost+' CREDITS')+'</div>';let b=document.createElement('button');b.textContent=has?'EQUIPPED':type==='WEAPON'?'BUY / EQUIP':'BUY / EQUIP';b.onclick=()=>{if(has){say('Already equipped.');return}if(coins<it.cost){say('NOT ENOUGH CREDITS');return}coins-=it.cost;if(type==='WEAPON'){owned.push(it.name);weapon=it.name;ammo=it.clip;reserve=it.clip*3}else armor=it.protection;hud();say(it.name+' EQUIPPED');openShop(type)};el.append(b);$('items').append(el)});show('shop');hud()}
@@ -201,6 +218,56 @@ function render(){
     if(corrected<7){ctx.fillStyle='#e0dfbd';ctx.globalAlpha=.10;ctx.fillRect(x,top,1,h);ctx.globalAlpha=1}
     depth[x]=depth[x+1]=depth[x+2]=corrected;
   }
+  // World props: crates, barrels, street lamps, shrubs and road barriers
+  [...scenery].sort((a,b)=>Math.hypot(b.x-player.x,b.y-player.y)-Math.hypot(a.x-player.x,a.y-player.y)).forEach(p=>{
+    const dx=p.x-player.x,dy=p.y-player.y,d=Math.hypot(dx,dy);
+    let ang=Math.atan2(dy,dx)-player.a;ang=Math.atan2(Math.sin(ang),Math.cos(ang));
+    if(Math.abs(ang)>.67||d<.35)return;
+    const sx=450+ang/1.25*900,ix=Math.max(0,Math.min(899,Math.floor(sx)));
+    if(sx<0||sx>=900||d>depth[ix]||blocked(player.x,player.y,p.x,p.y))return;
+    const scale=Math.min(150,270/d),base=horizon+195/d;
+    ctx.save();
+    if(p.type==='crate'){
+      const w=scale*.56,h=scale*.58,x=sx-w/2,y=base-h;
+      ctx.fillStyle='#263b2c';ctx.fillRect(x+5,y+5,w,h);
+      ctx.fillStyle='#8b7652';ctx.fillRect(x,y,w*.82,h);
+      ctx.fillStyle='#b19a6a';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+w*.18,y-7);ctx.lineTo(x+w,y-7);ctx.lineTo(x+w*.82,y);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#5e5039';ctx.beginPath();ctx.moveTo(x+w*.82,y);ctx.lineTo(x+w,y-7);ctx.lineTo(x+w,y+h-7);ctx.lineTo(x+w*.82,y+h);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#594a34';ctx.lineWidth=Math.max(1,scale*.018);
+      for(let k=1;k<4;k++){ctx.beginPath();ctx.moveTo(x+2,y+h*k/4);ctx.lineTo(x+w*.8,y+h*k/4);ctx.stroke()}
+      ctx.fillStyle='#d5c18b';ctx.fillRect(x+w*.12,y+h*.12,w*.08,h*.76);
+    }else if(p.type==='barrel'){
+      const w=scale*.32,h=scale*.62,x=sx-w/2,y=base-h;
+      ctx.fillStyle='#17221c';ctx.beginPath();ctx.ellipse(sx,base,w*.55,h*.09,0,0,Math.PI*2);ctx.fill();
+      const g=ctx.createLinearGradient(x,y,x+w,y);g.addColorStop(0,'#273f3b');g.addColorStop(.35,'#668078');g.addColorStop(.68,'#344a43');g.addColorStop(1,'#15251f');
+      ctx.fillStyle=g;ctx.fillRect(x,y,w,h);
+      ctx.strokeStyle='#a0a99a';ctx.lineWidth=Math.max(1,scale*.018);
+      [0.22,.76].forEach(v=>{ctx.beginPath();ctx.ellipse(sx,y+h*v,w*.5,h*.045,0,0,Math.PI*2);ctx.stroke()});
+      ctx.fillStyle='#17231d';ctx.beginPath();ctx.ellipse(sx,y,w*.5,h*.09,0,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#91a18f';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(sx,y,w*.38,h*.055,0,0,Math.PI*2);ctx.stroke();
+    }else if(p.type==='lamp'){
+      const h=scale*1.85,x=sx,y=base;
+      ctx.strokeStyle='#17201c';ctx.lineWidth=Math.max(2,scale*.055);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-h);ctx.stroke();
+      ctx.strokeStyle='#748174';ctx.lineWidth=Math.max(1,scale*.018);ctx.beginPath();ctx.moveTo(x-2,y);ctx.lineTo(x-2,y-h);ctx.stroke();
+      ctx.fillStyle='#202c25';ctx.fillRect(x-scale*.17,y-h,scale*.36,scale*.1);
+      ctx.fillStyle='#e0d3a0';ctx.globalAlpha=.75;ctx.fillRect(x-scale*.12,y-h+2,scale*.25,scale*.045);ctx.globalAlpha=1;
+      ctx.fillStyle='#d5ca9d22';ctx.beginPath();ctx.arc(x,y-h,scale*.34,0,Math.PI*2);ctx.fill();
+    }else if(p.type==='tree'||p.type==='bush'){
+      const h=scale*(p.type==='tree'?1.3:.6),r=scale*(p.type==='tree'?.3:.34),y=base-h;
+      ctx.fillStyle='#10170f66';ctx.beginPath();ctx.ellipse(sx,base,r*1.2,Math.max(2,scale*.07),0,0,Math.PI*2);ctx.fill();
+      if(p.type==='tree'){ctx.fillStyle='#554937';ctx.fillRect(sx-scale*.07,y+h*.45,scale*.14,h*.55)}
+      const greens=p.type==='tree'?['#263d2b','#3d5936','#587347']:['#344b2d','#53683b','#65794a'];
+      [[-0.18,.35],[.12,.22],[0,.48],[.22,.47]].forEach((o,i)=>{ctx.fillStyle=greens[i%greens.length];ctx.beginPath();ctx.arc(sx+o[0]*scale,y+o[1]*h,r*(i===2?1.05:.8),0,Math.PI*2);ctx.fill()});
+      ctx.fillStyle='#9db27b33';ctx.beginPath();ctx.arc(sx-r*.25,y+h*.28,r*.38,0,Math.PI*2);ctx.fill();
+    }else if(p.type==='barrier'){
+      const w=scale*.95,h=scale*.4,x=sx-w/2,y=base-h;
+      ctx.fillStyle='#10191366';ctx.beginPath();ctx.ellipse(sx,base,w*.7,scale*.07,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#73786b';ctx.beginPath();ctx.moveTo(x+4,y+h);ctx.lineTo(x+w*.12,y);ctx.lineTo(x+w*.88,y);ctx.lineTo(x+w-4,y+h);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#aeb19a';ctx.beginPath();ctx.moveTo(x+w*.12,y);ctx.lineTo(x+w*.88,y);ctx.lineTo(x+w*.78,y+5);ctx.lineTo(x+w*.2,y+5);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#c5b77c';ctx.globalAlpha=.8;ctx.fillRect(x+w*.2,y+h*.48,w*.18,Math.max(2,h*.1));ctx.fillRect(x+w*.62,y+h*.48,w*.18,Math.max(2,h*.1));ctx.globalAlpha=1;
+    }
+    ctx.restore();
+  });
   // Enemy silhouettes with layered uniform, helmet and equipment
   [...enemies].sort((a,b)=>Math.hypot(b.x-player.x,b.y-player.y)-Math.hypot(a.x-player.x,a.y-player.y)).forEach(e=>{
     const dx=e.x-player.x,dy=e.y-player.y,d=Math.hypot(dx,dy);
@@ -250,6 +317,11 @@ function render(){
   ctx.fillStyle='#465247';ctx.fillRect(-26,-48,56,8);ctx.fillStyle='#202b24';ctx.fillRect(15,-30,30,17);ctx.fillStyle='#0b100e';ctx.fillRect(-5,-18,16,25);
   if(now<muzzleFlashUntil){ctx.fillStyle='#f8d58a';ctx.beginPath();ctx.moveTo(96,-27);ctx.lineTo(137,-45);ctx.lineTo(124,-22);ctx.lineTo(148,-8);ctx.lineTo(105,-12);ctx.closePath();ctx.fill();ctx.fillStyle='#fff0bd';ctx.beginPath();ctx.arc(111,-23,9,0,Math.PI*2);ctx.fill()}
   ctx.restore();
+  // Ground grit and small scattered stones in the foreground
+  for(let i=0;i<34;i++){
+    const x=(i*137+53)%900,y=390+(i*47%125),r=1+(i%3);
+    ctx.fillStyle=i%2?'#c0b99522':'#0b120e35';ctx.beginPath();ctx.ellipse(x,y,r*1.7,r*.7,(i%5)*.3,0,Math.PI*2);ctx.fill();
+  }
   // Subtle edge vignette for depth
   const vignette=ctx.createRadialGradient(450,260,170,450,260,560);
   vignette.addColorStop(0,'#00000000');vignette.addColorStop(1,'#050a08aa');
