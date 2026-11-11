@@ -346,7 +346,7 @@ canvas {
 @media(max-width:760px){.bus-scene{height:225px}.transport{top:4px;width:96%;left:2%}}
 
 .gameover-panel {
-  min-height: 440px; display:flex; align-items:center; justify-content:center;
+  position:fixed; inset:0; z-index:9999; width:100%; min-height:100vh; margin:0; border-radius:0; padding:24px; display:flex; align-items:center; justify-content:center;
   overflow:hidden; position:relative;
   background:radial-gradient(ellipse at 50% 42%,#5a241f55 0,transparent 48%),linear-gradient(145deg,#1b2022,#0b1013 72%);
   border-color:#57352f;
@@ -403,3 +403,6 @@ canvas {
   .gamebar { font-size: 9px; }
   .top h1 { font-size: 34px; }
 }
+
+/* Keep the defeat screen above every game panel */
+#gameover:not(.hidden){display:flex!important;position:fixed!important;inset:0!important;z-index:99999!important;width:100%!important;min-height:100vh!important;margin:0!important;border-radius:0!important}
