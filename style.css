@@ -281,10 +281,12 @@ canvas {
   background:#07110f99; filter:blur(8px); animation:shadowPulse 3s ease-in-out infinite;
 }
 .transport {
-  position:absolute; z-index:2; left:7%; top:62px; width:86%;
-  animation:busFlight 3.4s ease-in-out infinite;
-  filter:drop-shadow(0 12px 9px #08110c77);
+  position:absolute; z-index:2; left:3%; top:8px; width:94%;
+  animation:busFlight 4.2s ease-in-out infinite;
+  filter:drop-shadow(0 15px 12px #08110c99) contrast(1.04) saturate(.88);
 }
+.wheel-spin { animation:wheelTurn 1.1s linear infinite; }
+@keyframes wheelTurn { to { rotate:360deg; } }
 .bus-art { display:block; width:100%; height:auto; overflow:visible; }
 .ground-blur {
   position:absolute; bottom:20px; left:0; width:100%; height:4px;
@@ -292,11 +294,11 @@ canvas {
   opacity:.6; animation:road 1.15s linear infinite;
 }
 @keyframes drift { from{transform:translateX(-170px)} to{transform:translateX(1150px)} }
-@keyframes busFlight { 0%,100%{transform:translateY(2px) rotate(-.5deg)} 50%{transform:translateY(-13px) rotate(.5deg)} }
+@keyframes busFlight { 0%,100%{transform:translateY(3px) rotate(-.35deg)} 50%{transform:translateY(-8px) rotate(.35deg)} }
 @keyframes shadowPulse { 0%,100%{transform:scaleX(1);opacity:.6} 50%{transform:scaleX(.82);opacity:.3} }
 @keyframes landscape { to{background-position:950px 0} }
 @keyframes road { to{background-position:-130px 0} }
-@media(max-width:760px){.bus-scene{height:190px}.transport{top:64px;width:94%;left:3%}}
+@media(max-width:760px){.bus-scene{height:190px}.transport{top:12px;width:100%;left:0}}
 
 #message {
   min-height: 24px;
