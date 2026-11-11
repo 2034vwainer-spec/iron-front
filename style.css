@@ -250,102 +250,53 @@ canvas {
 }
 
 .bus-scene {
-  height: 220px;
-  overflow: hidden;
-  position: relative;
-  isolation: isolate;
-  background: linear-gradient(180deg,#19384f 0%,#527d91 48%,#a9b8a5 78%,#59684b 100%);
-  border: 1px solid #526b70;
-  border-radius: 8px;
-  margin: 18px 0;
+  height:245px; overflow:hidden; position:relative; isolation:isolate;
+  background:linear-gradient(180deg,#102b43 0%,#426b83 49%,#aab9a7 78%,#58674c 100%);
+  border:1px solid #526b70; border-radius:9px; margin:18px 0;
 }
 .bus-scene::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  left: -10%; right: -10%; bottom: 0; height: 62px;
-  background: repeating-linear-gradient(105deg,#526044 0 45px,#66734d 46px 90px);
-  animation: landscape 5s linear infinite;
+  content:""; position:absolute; z-index:-1; left:-10%; right:-10%; bottom:0; height:65px;
+  background:repeating-linear-gradient(105deg,#4d6044 0 48px,#71805a 49px 95px);
+  animation:landscape 7s linear infinite;
 }
 .sun-glow {
-  position:absolute; width:110px; height:110px; right:12%; top:-48px;
-  border-radius:50%; background:#f6d994; filter:blur(3px); opacity:.75;
+  position:absolute; width:115px; height:115px; right:13%; top:-45px;
+  border-radius:50%; background:#f6d994; filter:blur(4px); opacity:.8;
+  box-shadow:0 0 55px 22px #f6d99444;
 }
 .cloud {
-  position: absolute; width: 115px; height: 25px; top: 32px;
-  background: #dce7e3; border-radius: 50px; opacity:.82;
-  filter: drop-shadow(18px 8px 0 #dce7e388);
-  animation: drift 12s linear infinite;
+  position:absolute; width:130px; height:27px; top:30px; border-radius:50px;
+  background:#e0e9e6; opacity:.78; filter:drop-shadow(25px 8px 0 #e0e9e655);
+  animation:drift 15s linear infinite;
 }
-.c1 { left: 4%; }
-.c2 { left: 58%; top: 66px; animation-duration: 16s; }
-.c3 { left: 105%; top: 22px; animation-duration: 19s; }
+.c1{left:4%}.c2{left:58%;top:65px;animation-duration:19s}.c3{left:105%;top:20px;animation-duration:22s}
 .distant-hills {
-  position:absolute; left:-5%; right:-5%; bottom:36px; height:75px;
+  position:absolute; left:-5%; right:-5%; bottom:38px; height:80px; opacity:.85;
   background:linear-gradient(145deg,transparent 0 18%,#526b5b 18% 42%,transparent 42%),
              linear-gradient(35deg,transparent 0 40%,#718064 40% 68%,transparent 68%);
-  opacity:.8; animation: landscape 9s linear infinite;
+  animation:landscape 13s linear infinite;
 }
 .bus-shadow {
-  position:absolute; left:17%; top:166px; width:66%; height:17px;
-  background:#101b1b99; border-radius:50%; filter:blur(7px);
-  animation: bus-shadow 2.8s ease-in-out infinite;
+  position:absolute; left:12%; width:76%; bottom:40px; height:18px; border-radius:50%;
+  background:#07110f99; filter:blur(8px); animation:shadowPulse 3s ease-in-out infinite;
 }
 .transport {
-  position: absolute;
-  z-index:2;
-  left: 12%; top: 82px; width: 76%; height: 70px;
-  border: 3px solid #17251f;
-  border-bottom-width:5px;
-  border-radius: 12px 24px 10px 9px;
-  background: linear-gradient(180deg,#82916a 0%,#596c4b 24%,#354b38 25%,#354b38 78%,#1f3028 79%);
-  box-shadow: inset 0 5px 0 #b0b68a55, 0 8px 0 #1a2824, 0 15px 24px #101b1b66;
-  animation: bus-flight 2.8s ease-in-out infinite;
+  position:absolute; z-index:2; left:7%; top:62px; width:86%;
+  animation:busFlight 3.4s ease-in-out infinite;
+  filter:drop-shadow(0 12px 9px #08110c77);
 }
-.bus-roof {
-  position:absolute; left:5%; right:8%; top:-9px; height:10px;
-  background:#9aa47a; border:2px solid #27382c; border-radius:8px 14px 0 0;
-}
-.bus-windows {
-  position:absolute; left:7%; right:18%; top:8px; height:24px;
-  border:2px solid #1a2a2b; border-radius:4px;
-  background:repeating-linear-gradient(90deg,#8eafad 0 12%,#263d43 12.5% 14.5%,#78999a 15% 27%);
-  box-shadow:inset 0 0 12px #d7e8d755;
-}
-.bus-front {
-  position:absolute; right:2%; top:8px; width:13%; height:39px;
-  background:linear-gradient(135deg,#9eb9b5,#49666a);
-  border:3px solid #1a2a2b; border-radius:4px 13px 3px 3px;
-  transform:skewY(-5deg);
-}
-.transport span {
-  position:absolute; left:34%; top:40px; padding:2px 9px;
-  color:#f0dfaa; background:#1c2b24; border:1px solid #a58a4d;
-  font:800 11px 'Barlow Condensed',sans-serif; letter-spacing:2px;
-}
-.wheel {
-  position:absolute; bottom:-13px; width:24px; height:24px;
-  border:5px solid #111a1a; border-radius:50%;
-  background:radial-gradient(circle,#a8a99a 0 20%,#384344 24% 100%);
-  box-shadow:0 0 0 2px #6b715f;
-  animation: wheel-spin .65s linear infinite;
-}
-.wheel-one { left:17%; }
-.wheel-two { right:20%; }
+.bus-art { display:block; width:100%; height:auto; overflow:visible; }
 .ground-blur {
-  position:absolute; bottom:17px; left:0; width:100%; height:3px;
-  background:repeating-linear-gradient(90deg,#e1d7a0 0 35px,transparent 35px 85px);
-  opacity:.55; animation: road 1.1s linear infinite;
+  position:absolute; bottom:20px; left:0; width:100%; height:4px;
+  background:repeating-linear-gradient(90deg,#e1d7a0 0 38px,transparent 38px 92px);
+  opacity:.6; animation:road 1.15s linear infinite;
 }
-@keyframes drift { from { transform:translateX(-150px); } to { transform:translateX(1100px); } }
-@keyframes bus-flight {
-  0%,100% { transform:translate(0,0) rotate(-1deg); }
-  50% { transform:translate(0,-12px) rotate(1deg); }
-}
-@keyframes bus-shadow { 0%,100% { transform:scaleX(1); opacity:.65; } 50% { transform:scaleX(.82); opacity:.35; } }
-@keyframes wheel-spin { to { transform:rotate(360deg); } }
-@keyframes landscape { to { background-position:900px 0; } }
-@keyframes road { to { background-position:-120px 0; } }
+@keyframes drift { from{transform:translateX(-170px)} to{transform:translateX(1150px)} }
+@keyframes busFlight { 0%,100%{transform:translateY(2px) rotate(-.5deg)} 50%{transform:translateY(-13px) rotate(.5deg)} }
+@keyframes shadowPulse { 0%,100%{transform:scaleX(1);opacity:.6} 50%{transform:scaleX(.82);opacity:.3} }
+@keyframes landscape { to{background-position:950px 0} }
+@keyframes road { to{background-position:-130px 0} }
+@media(max-width:760px){.bus-scene{height:190px}.transport{top:64px;width:94%;left:3%}}
 
 #message {
   min-height: 24px;
