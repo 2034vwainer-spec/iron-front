@@ -75,7 +75,7 @@ let currentTheme={label:'INDUSTRIAL YARD',sky:['#142533','#506d78','#a9b5a7'],ha
 let scenery=[];
 const spawnPoints={'ATTACK':{x:2.5,y:11.5,a:0},'ADVANCE':{x:2.5,y:11.5,a:0},'DEFENSE':{x:12.5,y:11.5,a:0},'SURVIVAL':{x:2.5,y:11.5,a:0},'BATTLE ROYALE':{x:11.5,y:21.5,a:-Math.PI/2}};
 const gun=()=>guns.find(g=>g.name===weapon);
-function show(id){['menu','shop','game','bus'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function show(id){['menu','shop','game','bus','gameover'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
 function say(s){$('message').textContent=s}
 function hud(){
   $('coins').textContent=coins;$('gameCoins').textContent=coins;$('level').textContent=level;
@@ -189,6 +189,7 @@ function start(){level=1;waveBreakUntil=0;hp=100;baseHp=100;configureMap();playe
 function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=mode+' / '+currentTheme.label;last=performance.now();hud();say('MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
 $('play').onclick=start;$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
 $('quit').onclick=()=>{playing=false;mouseDown=false;show('menu');say('MISSION ENDED')};
+$('retryGame').onclick=()=>start();$('gameOverMenu').onclick=()=>{playing=false;paused=false;mouseDown=false;show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
 function reload(){let n=Math.min(gun().clip-ammo,reserve);ammo+=n;reserve-=n;hud()}$('reload').onclick=reload;
 $('autoAim').addEventListener('change',()=>{if(!$('autoAim').checked){lockedTarget=null;$('autoFire').checked=false;say('AUTO AIM OFF — AUTO FIRE DISABLED')}else say('AUTO AIM ON — TARGET LOCK ACTIVE')});$('autoFire').addEventListener('change',()=>say($('autoFire').checked?'AUTO FIRE ON — SHOOTING WHEN TARGET IS LOCKED':'AUTO FIRE OFF — MANUAL SHOOTING'));
@@ -478,7 +479,17 @@ function render(){
   ctx.fillStyle='#ffe49a';ctx.beginPath();ctx.arc(px,py,3.5,0,Math.PI*2);ctx.fill();ctx.restore();
   if(mode==='DEFENSE'){ctx.fillStyle='#c7a75e';ctx.fillRect(360,345,180,35);ctx.fillStyle='#fff';ctx.font='12px monospace';ctx.fillText('YOUR BASE',414,367)}
 }
-function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if($('autoAim').checked){lockedTarget=findAutoTarget();if(lockedTarget){const desired=Math.atan2(lockedTarget.y-player.y,lockedTarget.x-player.x),turn=angleDiff(desired,player.a),step=Math.min(Math.abs(turn),5.8*dt);player.a+=Math.sign(turn)*step}}else lockedTarget=null;if(hp<=0||baseHp<=0){playing=false;show('menu');say('MISSION FAILED — SELECT PLAY TO RETRY')}}
+function finishGameOver(reason){
+  if(!playing)return;
+  playing=false;paused=false;mouseDown=false;waveBreakUntil=0;lockedTarget=null;
+  $('gameOverReason').textContent=reason;
+  $('gameOverWave').textContent=level;
+  $('gameOverCredits').textContent=coins;
+  $('gameOverMode').textContent=mode;
+  show('gameover');
+  say('GAME OVER');
+}
+function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if($('autoAim').checked){lockedTarget=findAutoTarget();if(lockedTarget){const desired=Math.atan2(lockedTarget.y-player.y,lockedTarget.x-player.x),turn=angleDiff(desired,player.a),step=Math.min(Math.abs(turn),5.8*dt);player.a+=Math.sign(turn)*step}}else lockedTarget=null;if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
 function loop(now){if(!playing||paused)return;let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);if(mouseDown)fire(false);else if($('autoAim').checked&&$('autoFire').checked&&lockedTarget)fire(true);render();hud();requestAnimationFrame(loop)}
 hud();
 })();
