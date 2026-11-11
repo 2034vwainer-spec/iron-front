@@ -4,62 +4,129 @@ let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve
 const guns=[{name:'PISTOL',cost:0,damage:25,clip:12,rate:330},{name:'AK-47',cost:650,damage:22,clip:30,rate:125},{name:'DESERT EAGLE',cost:900,damage:60,clip:7,rate:470},{name:'MACHINE GUN',cost:1600,damage:18,clip:100,rate:65}];
 const vests=[{name:'LIGHT VEST',cost:300,protection:15},{name:'REINFORCED VEST',cost:700,protection:30},{name:'HEAVY ARMOR',cost:1200,protection:50}];
 let owned=['PISTOL'];
-const map=(()=>{
+function buildMap(layout){
   const size=24;
   const g=Array.from({length:size},(_,y)=>Array.from({length:size},(_,x)=>(x===0||y===0||x===size-1||y===size-1)?'1':'0'));
   const block=(x1,y1,x2,y2,material='1')=>{for(let y=y1;y<=y2;y++)for(let x=x1;x<=x2;x++)g[y][x]=material};
-  // Industrial service buildings around a broad cross-shaped access road
-  block(4,3,8,7,'1');g[7][6]='0';
-  block(15,3,20,7,'2');g[7][17]='0';
-  block(4,16,8,20,'2');g[16][6]='0';
-  block(15,16,20,20,'3');g[16][17]='0';
-  // Loading docks and smaller utility structures
-  block(2,5,3,7,'3');g[7][2]='0';
-  block(20,5,21,7,'1');g[7][20]='0';
-  block(2,16,3,18,'1');g[17][3]='0';
-  block(20,16,21,18,'2');g[17][20]='0';
-  // Shipping containers, concrete dividers and guard posts
-  block(9,8,9,9,'2');
-  block(14,8,14,9,'3');
-  block(9,14,10,14,'1');
-  block(13,14,14,14,'2');
-  block(6,10,7,10,'3');
-  block(17,12,18,12,'1');
-  block(11,4,12,5,'3');
-  // Keep the center and road junction open for movement
-  for(let x=1;x<size-1;x++){g[11][x]='0';g[12][x]='0'}
-  for(let y=1;y<size-1;y++){g[y][11]='0';g[y][12]='0'}
-  // Restore building corners beyond the central road only
-  block(4,3,8,7,'1');g[7][6]='0';
-  block(15,3,20,7,'2');g[7][17]='0';
-  block(4,16,8,20,'2');g[16][6]='0';
-  block(15,16,20,20,'3');g[16][17]='0';
-  // Add selected roadside cargo containers without closing the main lanes
-  block(8,9,9,9,'2');block(14,14,15,14,'3');
+  const open=(x,y)=>{g[y][x]='0'};
+  if(layout==='ATTACK'){
+    block(4,3,8,7,'1');g[7][6]='0';
+    block(15,3,20,7,'2');g[7][17]='0';
+    block(4,16,8,20,'2');g[16][6]='0';
+    block(15,16,20,20,'3');g[16][17]='0';
+    block(2,5,3,7,'3');g[7][2]='0';block(20,5,21,7,'1');g[7][20]='0';
+    block(2,16,3,18,'1');g[17][3]='0';block(20,16,21,18,'2');g[17][20]='0';
+    block(9,8,9,9,'2');block(14,8,14,9,'3');block(9,14,10,14,'1');
+    block(13,14,14,14,'2');block(6,10,7,10,'3');block(17,12,18,12,'1');block(11,4,12,5,'3');
+    for(let x=1;x<23;x++){open(x,11);open(x,12)}
+    for(let y=1;y<23;y++){open(11,y);open(12,y)}
+    block(4,3,8,7,'1');g[7][6]='0';block(15,3,20,7,'2');g[7][17]='0';
+    block(4,16,8,20,'2');g[16][6]='0';block(15,16,20,20,'3');g[16][17]='0';
+    block(8,9,9,9,'2');block(14,14,15,14,'3');
+  }else if(layout==='ADVANCE'){
+    // Open desert highway with staggered ruins and rock-cut passages
+    block(3,3,7,7,'3');block(11,2,13,6,'2');block(17,3,21,7,'1');
+    block(2,16,6,20,'2');block(9,17,13,20,'3');block(17,16,21,20,'2');
+    block(8,8,9,9,'3');block(14,14,15,15,'1');
+    block(5,9,6,9,'2');block(17,9,19,9,'3');
+    for(let x=1;x<23;x++){open(x,10);open(x,11);open(x,12);open(x,13)}
+    // Narrow side cuts around the abandoned structures
+    open(7,6);open(13,6);open(17,7);open(6,16);open(13,17);open(17,16);
+  }else if(layout==='DEFENSE'){
+    // Fortified headquarters on the east, with a protected entrance
+    block(16,7,22,17,'1');open(16,11);open(16,12);
+    block(18,8,19,10,'2');block(20,14,21,15,'2');
+    block(17,8,17,9,'3');block(17,15,17,16,'3');
+    block(3,3,7,6,'2');open(5,6);
+    block(3,17,7,20,'3');open(5,17);
+    block(9,3,12,5,'1');open(10,5);
+    block(9,18,12,20,'2');open(10,18);
+    block(7,9,8,10,'3');block(7,14,8,14,'1');
+    for(let x=1;x<16;x++){open(x,11);open(x,12)}
+  }else if(layout==='SURVIVAL'){
+    // Overgrown woodland with ruined shelters and broken stone walls
+    block(5,4,7,6,'3');open(6,6);
+    block(16,3,19,6,'1');open(17,6);
+    block(4,16,8,19,'2');open(6,16);
+    block(16,16,19,20,'3');open(17,16);
+    block(10,5,11,7,'2');block(12,16,13,18,'1');
+    block(8,10,9,10,'3');block(14,13,15,13,'2');
+    block(3,9,4,9,'1');block(19,10,20,10,'3');
+    for(let x=1;x<23;x++){if(x!==5&&x!==18){open(x,11);open(x,12)}}
+    for(let y=1;y<23;y++){open(11,y);open(12,y)}
+  }else if(layout==='BATTLE ROYALE'){
+    // Dense town block with narrow alleys, courtyards and storefront rows
+    block(3,3,7,7,'1');open(5,7);
+    block(9,2,14,6,'2');open(11,6);
+    block(17,3,21,7,'3');open(19,7);
+    block(3,16,7,20,'2');open(5,16);
+    block(9,17,14,21,'3');open(11,17);
+    block(17,16,21,20,'1');open(19,16);
+    block(2,8,4,9,'3');block(19,9,21,10,'2');
+    block(7,9,8,10,'1');block(15,13,16,14,'2');
+    block(8,14,9,15,'3');block(14,8,15,9,'1');
+    for(let x=1;x<23;x++){open(x,11);open(x,12)}
+    for(let y=1;y<23;y++){open(11,y);open(12,y)}
+  }
   return g.map(row=>row.join(''));
-})();
+}
+let map=buildMap('ATTACK');
+let currentTheme={label:'INDUSTRIAL YARD',sky:['#142533','#506d78','#a9b5a7'],haze:'#c0c3ae66',skyline:'#263c3c',road:[65,72,68],ground:[117,119,105],grass:[69,83,58],roadAxis:'cross'};
+let scenery=[];
+const spawnPoints={'ATTACK':{x:2.5,y:11.5,a:0},'ADVANCE':{x:2.5,y:11.5,a:0},'DEFENSE':{x:12.5,y:11.5,a:0},'SURVIVAL':{x:2.5,y:11.5,a:0},'BATTLE ROYALE':{x:11.5,y:21.5,a:-Math.PI/2}};
 const gun=()=>guns.find(g=>g.name===weapon);
 function show(id){['menu','shop','game','bus'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
 function say(s){$('message').textContent=s}
 function hud(){$('coins').textContent=coins;$('gameCoins').textContent=coins;$('level').textContent=level;$('hp').textContent=Math.max(0,Math.ceil(hp));$('ammo').textContent=ammo+'/'+reserve}
 function wall(x,y){let a=Math.floor(x),b=Math.floor(y);return b<0||b>=map.length||a<0||a>=map[0].length||map[b][a]!=='0'}
-const scenery=[
-  {x:2.7,y:8.6,type:'lamp'},{x:21.2,y:8.7,type:'lamp'},
-  {x:3.3,y:14.5,type:'lamp'},{x:20.7,y:14.2,type:'lamp'},
-  {x:9.8,y:3.2,type:'tree'},{x:13.4,y:3.3,type:'tree'},
-  {x:9.7,y:20.8,type:'tree'},{x:13.7,y:20.8,type:'tree'},
-  {x:3.4,y:10.1,type:'barrel'},{x:3.8,y:10.8,type:'barrel'},
-  {x:20.4,y:10.1,type:'barrel'},{x:20.1,y:10.8,type:'barrel'},
-  {x:9.3,y:10.2,type:'crate'},{x:9.9,y:10.2,type:'crate'},
-  {x:14.1,y:13.7,type:'crate'},{x:15.0,y:13.7,type:'crate'},
-  {x:7.1,y:9.7,type:'barrier'},{x:16.8,y:14.8,type:'barrier'},
-  {x:5.2,y:10.0,type:'barrier'},{x:18.7,y:13.6,type:'barrier'},
-  {x:2.8,y:4.2,type:'bush'},{x:3.4,y:4.3,type:'bush'},
-  {x:20.3,y:4.3,type:'bush'},{x:21.0,y:4.2,type:'bush'},
-  {x:2.8,y:19.6,type:'bush'},{x:3.6,y:19.8,type:'bush'},
-  {x:20.4,y:19.5,type:'bush'},{x:21.0,y:19.6,type:'bush'},
-  {x:8.8,y:13.3,type:'crate'},{x:15.1,y:9.7,type:'crate'}
-].filter(p=>!wall(p.x,p.y));
+const sceneryByMode={
+  'ATTACK':[
+    {x:2.7,y:8.6,type:'lamp'},{x:21.2,y:8.7,type:'lamp'},{x:3.3,y:14.5,type:'lamp'},{x:20.7,y:14.2,type:'lamp'},
+    {x:9.8,y:3.2,type:'tree'},{x:13.4,y:3.3,type:'tree'},{x:9.7,y:20.8,type:'tree'},{x:13.7,y:20.8,type:'tree'},
+    {x:3.4,y:10.1,type:'barrel'},{x:3.8,y:10.8,type:'barrel'},{x:20.4,y:10.1,type:'barrel'},{x:20.1,y:10.8,type:'barrel'},
+    {x:9.3,y:10.2,type:'crate'},{x:9.9,y:10.2,type:'crate'},{x:14.1,y:13.7,type:'crate'},{x:15,y:13.7,type:'crate'},
+    {x:7.1,y:9.7,type:'barrier'},{x:16.8,y:14.8,type:'barrier'},{x:5.2,y:10,type:'barrier'},{x:18.7,y:13.6,type:'barrier'},
+    {x:2.8,y:4.2,type:'bush'},{x:3.4,y:4.3,type:'bush'},{x:20.3,y:4.3,type:'bush'},{x:21,y:4.2,type:'bush'}
+  ],
+  'ADVANCE':[
+    {x:2.8,y:8.5,type:'cactus'},{x:5,y:8.6,type:'rock'},{x:8,y:14.8,type:'rock'},{x:10,y:8.4,type:'sandbag'},
+    {x:14,y:15.2,type:'rock'},{x:16,y:8.6,type:'cactus'},{x:20.8,y:8.4,type:'cactus'},
+    {x:3,y:14.8,type:'barrel'},{x:6.8,y:14.7,type:'barrier'},{x:12,y:15.2,type:'barrel'},
+    {x:18.5,y:14.8,type:'sandbag'},{x:21,y:14.6,type:'rock'},{x:8.8,y:3.2,type:'bush'},{x:15,y:20.8,type:'bush'}
+  ],
+  'DEFENSE':[
+    {x:14.8,y:8.2,type:'sandbag'},{x:14.8,y:9.2,type:'sandbag'},{x:15,y:14.2,type:'sandbag'},
+    {x:18.4,y:11,type:'crate'},{x:20.4,y:12.8,type:'barrel'},{x:17.5,y:14.2,type:'barrier'},
+    {x:2.3,y:8.2,type:'lamp'},{x:13.8,y:8.1,type:'lamp'},{x:13.8,y:15.1,type:'lamp'},
+    {x:8.5,y:7.2,type:'crate'},{x:8.5,y:16.3,type:'crate'},{x:5,y:9.2,type:'barrier'},{x:5,y:14.5,type:'barrier'}
+  ],
+  'SURVIVAL':[
+    {x:3.4,y:7.8,type:'tree'},{x:5.1,y:8.2,type:'tree'},{x:7.8,y:3.4,type:'tree'},{x:9,y:4.1,type:'bush'},
+    {x:14.5,y:3.2,type:'tree'},{x:20.2,y:8.3,type:'tree'},{x:21,y:9.4,type:'bush'},
+    {x:3.1,y:15.2,type:'tree'},{x:8.8,y:17.4,type:'tree'},{x:9.5,y:19,type:'bush'},
+    {x:14.2,y:20.4,type:'tree'},{x:20.5,y:15.5,type:'tree'},{x:21,y:19.6,type:'tree'},
+    {x:4,y:11,type:'rock'},{x:8.5,y:12.9,type:'stump'},{x:15.1,y:10.4,type:'rock'},{x:17,y:13.8,type:'stump'},
+    {x:6,y:13.4,type:'bush'},{x:18.8,y:5.3,type:'bush'},{x:12.8,y:8.4,type:'rock'}
+  ],
+  'BATTLE ROYALE':[
+    {x:2.6,y:9.6,type:'lamp'},{x:7.8,y:8.6,type:'crate'},{x:8.8,y:13.8,type:'barrel'},
+    {x:14.9,y:10.2,type:'barrel'},{x:15.8,y:15,type:'crate'},{x:21.1,y:9.6,type:'lamp'},
+    {x:2.6,y:14.5,type:'barrier'},{x:7.6,y:15.3,type:'barrier'},{x:16.1,y:8.7,type:'barrier'},
+    {x:20.9,y:14.6,type:'lamp'},{x:8.3,y:3.1,type:'bush'},{x:15.7,y:20.8,type:'bush'},
+    {x:2.5,y:20.5,type:'barrel'},{x:21,y:20.5,type:'crate'}
+  ]
+};
+const themes={
+  'ATTACK':{label:'INDUSTRIAL YARD',sky:['#142533','#506d78','#a9b5a7'],haze:'#c0c3ae66',skyline:'#263c3c',road:[65,72,68],ground:[117,119,105],grass:[69,83,58],roadAxis:'cross'},
+  'ADVANCE':{label:'DUST ROAD',sky:['#263b4a','#8c785f','#d2b98d'],haze:'#e4c9a066',skyline:'#685640',road:[104,91,73],ground:[159,137,103],grass:[111,117,76],roadAxis:'horizontal'},
+  'DEFENSE':{label:'FORTIFIED OUTPOST',sky:['#101f27','#526b67','#a6b49d'],haze:'#bdc6a766',skyline:'#33483e',road:[61,72,65],ground:[105,116,94],grass:[73,94,65],roadAxis:'horizontal'},
+  'SURVIVAL':{label:'OVERGROWN WOODLAND',sky:['#14282d','#607b70','#b0bda0'],haze:'#c8d1ad66',skyline:'#263e2c',road:[81,89,69],ground:[96,112,78],grass:[55,89,52],roadAxis:'cross'},
+  'BATTLE ROYALE':{label:'ABANDONED TOWN',sky:['#192838','#72818a','#c1b89f'],haze:'#d1c8b266',skyline:'#3b4648',road:[73,79,77],ground:[124,119,105],grass:[82,97,69],roadAxis:'cross'}
+};
+function configureMap(){
+  map=buildMap(mode);currentTheme=themes[mode]||themes.ATTACK;
+  scenery=(sceneryByMode[mode]||sceneryByMode.ATTACK).filter(p=>!wall(p.x,p.y));
+}
 function free(x,y,r=.18){return !wall(x-r,y-r)&&!wall(x+r,y-r)&&!wall(x-r,y+r)&&!wall(x+r,y+r)}
 function blocked(x1,y1,x2,y2){let d=Math.hypot(x2-x1,y2-y1),n=Math.ceil(d*12);for(let i=1;i<n;i++){let t=i/n;if(wall(x1+(x2-x1)*t,y1+(y2-y1)*t))return true}return false}
 function openShop(type){$('shopTitle').textContent=type==='WEAPON'?'WEAPON ARMORY':'ARMOR SHOP';let arr=type==='WEAPON'?guns:vests;$('items').innerHTML='';arr.forEach(it=>{let el=document.createElement('article');el.className='item';let desc=type==='WEAPON'?it.damage+' damage · '+it.clip+' round magazine · 100% durability':'Damage reduction: '+it.protection+'%';let has=type==='WEAPON'?owned.includes(it.name):armor===it.protection;el.innerHTML='<h3>'+it.name+'</h3><p>'+desc+'</p><div class="price">'+(it.cost===0?'FREE':it.cost+' CREDITS')+'</div>';let b=document.createElement('button');b.textContent=has?'EQUIPPED':type==='WEAPON'?'BUY / EQUIP':'BUY / EQUIP';b.onclick=()=>{if(has){say('Already equipped.');return}if(coins<it.cost){say('NOT ENOUGH CREDITS');return}coins-=it.cost;if(type==='WEAPON'){owned.push(it.name);weapon=it.name;ammo=it.clip;reserve=it.clip*3}else armor=it.protection;hud();say(it.name+' EQUIPPED');openShop(type)};el.append(b);$('items').append(el)});show('shop');hud()}
@@ -70,7 +137,7 @@ function spawn(n){
   const spots=[];
   for(let y=1;y<map.length-1;y++)for(let x=1;x<map[0].length-1;x++){
     const sx=x+.5,sy=y+.5,d=Math.hypot(sx-player.x,sy-player.y);
-    if(!wall(sx,sy)&&d>2.3&&d<16&&!blocked(player.x,player.y,sx,sy))spots.push({x:sx,y:sy});
+    if(!wall(sx,sy)&&d>2.3&&d<16&&!(mode==='DEFENSE'&&sx>16.2)&&!blocked(player.x,player.y,sx,sy))spots.push({x:sx,y:sy});
   }
   for(let i=spots.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[spots[i],spots[j]]=[spots[j],spots[i]]}
   const chosen=[];
@@ -86,8 +153,8 @@ function spawn(n){
     enemies.push({x:p.x,y:p.y,hp:hpValue,max:hpValue,boss,speed:boss?.48:.65+level*.025,hit:0});
   });
 }
-function start(){level=1;hp=100;baseHp=100;player={x:2.5,y:11.5,a:0};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(mode==='SURVIVAL'?8:5);launch()}
-function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=mode;last=performance.now();hud();say('MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
+function start(){level=1;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(mode==='SURVIVAL'?8:5);launch()}
+function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=mode+' / '+currentTheme.label;last=performance.now();hud();say('MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
 $('play').onclick=start;$('jump').onclick=()=>{spawn(14);launch();say('BATTLE ROYALE — SURVIVE THE DROP')};
 $('quit').onclick=()=>{playing=false;mouseDown=false;show('menu');say('MISSION ENDED')};
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
@@ -153,14 +220,14 @@ function render(){
   const now=performance.now();
   const horizon=260+Math.sin(footstepPhase)*1.7-cameraKick*5;
   const sky=ctx.createLinearGradient(0,0,0,horizon);
-  sky.addColorStop(0,'#142533');sky.addColorStop(.62,'#506d78');sky.addColorStop(1,'#a9b5a7');
+  sky.addColorStop(0,currentTheme.sky[0]);sky.addColorStop(.62,currentTheme.sky[1]);sky.addColorStop(1,currentTheme.sky[2]);
   ctx.fillStyle=sky;ctx.fillRect(0,0,900,horizon+2);
   // Distant atmospheric haze and ground
   const haze=ctx.createLinearGradient(0,horizon-15,0,horizon+50);
-  haze.addColorStop(0,'#c0c3ae66');haze.addColorStop(1,'#59665300');
+  haze.addColorStop(0,currentTheme.haze);haze.addColorStop(1,'#59665300');
   ctx.fillStyle=haze;ctx.fillRect(0,horizon-15,900,70);
   // Distant industrial skyline: warehouses, light poles and tree line
-  ctx.fillStyle='#263c3c';ctx.globalAlpha=.45;
+  ctx.fillStyle=currentTheme.skyline;ctx.globalAlpha=.45;
   ctx.beginPath();ctx.moveTo(0,horizon-7);ctx.lineTo(0,horizon-39);ctx.lineTo(48,horizon-39);ctx.lineTo(48,horizon-54);ctx.lineTo(112,horizon-54);ctx.lineTo(112,horizon-22);ctx.lineTo(168,horizon-22);ctx.lineTo(168,horizon-66);ctx.lineTo(258,horizon-66);ctx.lineTo(258,horizon-25);ctx.lineTo(324,horizon-25);ctx.lineTo(324,horizon-43);ctx.lineTo(388,horizon-43);ctx.lineTo(388,horizon-12);ctx.lineTo(900,horizon-12);ctx.closePath();ctx.fill();
   ctx.fillStyle='#172b2c';ctx.globalAlpha=.34;
   for(let i=0;i<18;i++){const x=i*57+12,ht=14+(i*17%33);ctx.fillRect(x,horizon-ht,5,ht);ctx.beginPath();ctx.arc(x+2,horizon-ht,11,Math.PI,Math.PI*2);ctx.fill()}
@@ -170,9 +237,9 @@ function render(){
     const dist=Math.min(22,390*.58/(y-horizon));
     for(let x=0;x<900;x+=10){
       const angle=player.a+(x/900-.5)*1.25,wx=player.x+Math.cos(angle)*dist,wy=player.y+Math.sin(angle)*dist;
-      const road=Math.abs(wy-11.5)<1.2||Math.abs(wx-11.5)<1.2;
+      const road=currentTheme.roadAxis==='horizontal'?Math.abs(wy-11.5)<1.35:(Math.abs(wy-11.5)<1.2||Math.abs(wx-11.5)<1.2);
       const grass=((Math.floor(wx*1.7)+Math.floor(wy*1.3)*3)%13===0)&&!road;
-      let base=road?[65,72,68]:grass?[69,83,58]:[117,119,105];
+      let base=road?currentTheme.road:grass?currentTheme.grass:currentTheme.ground;
       const fx=wx-Math.floor(wx),fy=wy-Math.floor(wy);
       const seam=!road&&(fx<.035||fy<.035);
       const grit=(Math.floor(wx*13+wy*31)%7)*1.6;
@@ -183,8 +250,9 @@ function render(){
       const b=Math.max(0,Math.min(255,(base[2]+grit)*shade*variation));
       ctx.fillStyle='rgb('+Math.floor(r)+','+Math.floor(g)+','+Math.floor(b)+')';ctx.fillRect(x,y,10,6);
       // Broken yellow road markings at the broad crossroad
-      if(road&&Math.abs(wy-11.5)<.045&&Math.abs((wx%3)-1.5)<.65&&dist<13){
-        ctx.fillStyle='#d8c77d';ctx.globalAlpha=Math.max(.15,.65-dist*.035);ctx.fillRect(x,y,10,3);ctx.globalAlpha=1;
+      const laneCenter=currentTheme.roadAxis==='horizontal'?Math.abs(wy-11.5):Math.min(Math.abs(wy-11.5),Math.abs(wx-11.5));
+      if(road&&laneCenter<.045&&Math.abs((wx%3)-1.5)<.65&&dist<13){
+        ctx.fillStyle=mode==='ADVANCE'?'#d4bc82':'#d8c77d';ctx.globalAlpha=Math.max(.15,.65-dist*.035);ctx.fillRect(x,y,10,3);ctx.globalAlpha=1;
       }
     }
   }
