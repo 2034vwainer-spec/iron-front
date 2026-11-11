@@ -75,7 +75,7 @@ let currentTheme={label:'INDUSTRIAL YARD',sky:['#142533','#506d78','#a9b5a7'],ha
 let scenery=[];
 const spawnPoints={'ATTACK':{x:2.5,y:11.5,a:0},'ADVANCE':{x:2.5,y:11.5,a:0},'DEFENSE':{x:12.5,y:11.5,a:0},'SURVIVAL':{x:2.5,y:11.5,a:0},'BATTLE ROYALE':{x:11.5,y:21.5,a:-Math.PI/2}};
 const gun=()=>guns.find(g=>g.name===weapon);
-function show(id){['menu','shop','game','bus','gameover'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function show(id){['menu','shop','game','bus','gameover'].forEach(x=>$(x).classList.toggle('hidden',x!==id));if(id==='gameover'){$('gameover').classList.remove('hidden');$('gameover').scrollIntoView({block:'center',behavior:'instant'})}}
 function say(s){$('message').textContent=s}
 function hud(){
   $('coins').textContent=coins;$('gameCoins').textContent=coins;$('level').textContent=level;
@@ -481,12 +481,13 @@ function render(){
 }
 function finishGameOver(reason){
   if(!playing)return;
-  playing=false;paused=false;mouseDown=false;waveBreakUntil=0;lockedTarget=null;
+  playing=false;paused=false;mouseDown=false;waveBreakUntil=0;lockedTarget=null;keys={};
   $('gameOverReason').textContent=reason;
   $('gameOverWave').textContent=level;
   $('gameOverCredits').textContent=coins;
   $('gameOverMode').textContent=mode;
   show('gameover');
+  $('gameover').style.display='flex';
   say('GAME OVER');
 }
 function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if($('autoAim').checked){lockedTarget=findAutoTarget();if(lockedTarget){const desired=Math.atan2(lockedTarget.y-player.y,lockedTarget.x-player.x),turn=angleDiff(desired,player.a),step=Math.min(Math.abs(turn),5.8*dt);player.a+=Math.sign(turn)*step}}else lockedTarget=null;if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
