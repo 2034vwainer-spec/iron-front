@@ -1,6 +1,6 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext('2d');
-let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,mouseDown=false,keys={},enemies=[],lockedTarget=null,player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null;
+let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,mouseDown=false,keys={},enemies=[],lockedTarget=null,player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0;
 const guns=[{name:'PISTOL',cost:0,damage:25,clip:12,rate:330},{name:'AK-47',cost:650,damage:22,clip:30,rate:125},{name:'DESERT EAGLE',cost:900,damage:60,clip:7,rate:470},{name:'MACHINE GUN',cost:1600,damage:18,clip:100,rate:65}];
 const vests=[{name:'LIGHT VEST',cost:300,protection:15},{name:'REINFORCED VEST',cost:700,protection:30},{name:'HEAVY ARMOR',cost:1200,protection:50}];
 let owned=['PISTOL'];
@@ -77,7 +77,17 @@ const spawnPoints={'ATTACK':{x:2.5,y:11.5,a:0},'ADVANCE':{x:2.5,y:11.5,a:0},'DEF
 const gun=()=>guns.find(g=>g.name===weapon);
 function show(id){['menu','shop','game','bus'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
 function say(s){$('message').textContent=s}
-function hud(){$('coins').textContent=coins;$('gameCoins').textContent=coins;$('level').textContent=level;$('hp').textContent=Math.max(0,Math.ceil(hp));$('ammo').textContent=ammo+'/'+reserve}
+function hud(){
+  $('coins').textContent=coins;$('gameCoins').textContent=coins;$('level').textContent=level;
+  $('hp').textContent=Math.max(0,Math.ceil(hp));$('ammo').textContent=ammo+'/'+reserve;
+  if($('enemyCount'))$('enemyCount').textContent=enemies.length;
+  if($('waveHeadline'))$('waveHeadline').textContent='WAVE '+level;
+  if($('waveDetail')){
+    const seconds=waveBreakUntil?Math.max(0,Math.ceil((waveBreakUntil-performance.now())/1000)):0;
+    $('waveDetail').textContent=waveBreakUntil?'NEXT WAVE IN '+seconds+'s':enemies.length+' HOSTILES REMAINING';
+    $('waveStatus').classList.toggle('intermission',!!waveBreakUntil);
+  }
+}
 function wall(x,y){let a=Math.floor(x),b=Math.floor(y);return b<0||b>=map.length||a<0||a>=map[0].length||map[b][a]!=='0'}
 const sceneryByMode={
   'ATTACK':[
@@ -132,6 +142,10 @@ function blocked(x1,y1,x2,y2){let d=Math.hypot(x2-x1,y2-y1),n=Math.ceil(d*12);fo
 function openShop(type){$('shopTitle').textContent=type==='WEAPON'?'WEAPON ARMORY':'ARMOR SHOP';let arr=type==='WEAPON'?guns:vests;$('items').innerHTML='';arr.forEach(it=>{let el=document.createElement('article');el.className='item';let desc=type==='WEAPON'?it.damage+' damage · '+it.clip+' round magazine · 100% durability':'Damage reduction: '+it.protection+'%';let has=type==='WEAPON'?owned.includes(it.name):armor===it.protection;el.innerHTML='<h3>'+it.name+'</h3><p>'+desc+'</p><div class="price">'+(it.cost===0?'FREE':it.cost+' CREDITS')+'</div>';let b=document.createElement('button');b.textContent=has?'EQUIPPED':type==='WEAPON'?'BUY / EQUIP':'BUY / EQUIP';b.onclick=()=>{if(has){say('Already equipped.');return}if(coins<it.cost){say('NOT ENOUGH CREDITS');return}coins-=it.cost;if(type==='WEAPON'){owned.push(it.name);weapon=it.name;ammo=it.clip;reserve=it.clip*3}else armor=it.protection;hud();say(it.name+' EQUIPPED');openShop(type)};el.append(b);$('items').append(el)});show('shop');hud()}
 $('weapons').onclick=()=>openShop('WEAPON');$('armor').onclick=()=>openShop('ARMOR');$('back').onclick=()=>show('menu');
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('selected',x===b));say('SELECTED OPERATION: '+mode)});
+function waveSize(wave=level){
+  const base={ATTACK:5,ADVANCE:5,DEFENSE:6,SURVIVAL:8,'BATTLE ROYALE':12}[mode]||5;
+  return Math.min(22,base+Math.floor((wave-1)*1.45));
+}
 function spawn(n){
   enemies=[];lockedTarget=null;
   const spots=[];
@@ -149,13 +163,31 @@ function spawn(n){
     if(chosen.length>=n)break;
   }
   chosen.forEach((p,i)=>{
-    const boss=(level===1||level%3===0)&&i===0,hpValue=boss?260+level*35:55+level*12;
-    enemies.push({x:p.x,y:p.y,hp:hpValue,max:hpValue,boss,speed:boss?.48:.65+level*.025,hit:0});
+    const boss=level>1&&level%3===0&&i===0,hpValue=boss?260+level*38:55+level*12;
+    enemies.push({x:p.x,y:p.y,hp:hpValue,max:hpValue,boss,speed:boss?.48:Math.min(1.25,.65+level*.025),hit:0});
   });
 }
-function start(){level=1;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(mode==='SURVIVAL'?8:5);launch()}
+function beginNextWave(){
+  if(waveBreakUntil||!playing)return;
+  waveBreakUntil=performance.now()+4500;
+  lockedTarget=null;
+  say('WAVE '+level+' CLEARED — PREPARE FOR THE NEXT WAVE');
+  hud();
+}
+function advanceWave(now){
+  if(!waveBreakUntil||now<waveBreakUntil)return;
+  waveBreakUntil=0;
+  level++;
+  const count=waveSize(level);
+  spawn(count);
+  // A small reserve refill rewards completing a wave without filling the magazine automatically.
+  reserve+=Math.max(4,Math.ceil(gun().clip*.35));
+  say(level%3===0?'BOSS WAVE '+level+' — A HEAVY ENEMY HAS ARRIVED':'WAVE '+level+' — '+count+' HOSTILES INCOMING');
+  hud();
+}
+function start(){level=1;waveBreakUntil=0;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(waveSize(1));launch()}
 function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=mode+' / '+currentTheme.label;last=performance.now();hud();say('MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
-$('play').onclick=start;$('jump').onclick=()=>{spawn(14);launch();say('BATTLE ROYALE — SURVIVE THE DROP')};
+$('play').onclick=start;$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
 $('quit').onclick=()=>{playing=false;mouseDown=false;show('menu');say('MISSION ENDED')};
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
 function reload(){let n=Math.min(gun().clip-ammo,reserve);ammo+=n;reserve-=n;hud()}$('reload').onclick=reload;
@@ -196,7 +228,7 @@ function fire(automatic=false){
     if(target.hp<=0){
       coins+=target.boss?500:100;enemies=enemies.filter(e=>e!==target);if(lockedTarget===target)lockedTarget=null;
       say(target.boss?'BOSS DEFEATED +500 CREDITS':'ENEMY DEFEATED +100 CREDITS');
-      if(!enemies.length){level++;hp=Math.min(100,hp+15);spawn(Math.min(18,4+level*2));say('WAVE '+level+' — ENEMY REINFORCEMENTS')}
+      if(!enemies.length){hp=Math.min(100,hp+15);beginNextWave()}
     }
   }else if(!automatic){say('SHOT FIRED — NO TARGET HIT')}
   hud();
@@ -447,6 +479,6 @@ function render(){
   if(mode==='DEFENSE'){ctx.fillStyle='#c7a75e';ctx.fillRect(360,345,180,35);ctx.fillStyle='#fff';ctx.font='12px monospace';ctx.fillText('YOUR BASE',414,367)}
 }
 function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if($('autoAim').checked){lockedTarget=findAutoTarget();if(lockedTarget){const desired=Math.atan2(lockedTarget.y-player.y,lockedTarget.x-player.x),turn=angleDiff(desired,player.a),step=Math.min(Math.abs(turn),5.8*dt);player.a+=Math.sign(turn)*step}}else lockedTarget=null;if(hp<=0||baseHp<=0){playing=false;show('menu');say('MISSION FAILED — SELECT PLAY TO RETRY')}}
-function loop(now){if(!playing||paused)return;let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);if(mouseDown)fire(false);else if($('autoAim').checked&&$('autoFire').checked&&lockedTarget)fire(true);render();hud();requestAnimationFrame(loop)}
+function loop(now){if(!playing||paused)return;let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);if(mouseDown)fire(false);else if($('autoAim').checked&&$('autoFire').checked&&lockedTarget)fire(true);render();hud();requestAnimationFrame(loop)}
 hud();
 })();
