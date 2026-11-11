@@ -225,6 +225,30 @@ button.primary {
 
 .gamebar b { color: var(--gold); }
 
+.wave-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 9px 13px;
+  border: 1px solid #435448;
+  border-left: 4px solid #8d9e70;
+  border-radius: 5px;
+  background: linear-gradient(90deg,#1a2922,#101a17);
+  color: #b9c7b6;
+  font: 700 10px 'Roboto Mono', monospace;
+  letter-spacing: 1px;
+}
+.wave-status b { color: #e3c979; font-size: 12px; }
+.wave-status.intermission {
+  border-left-color: #d5a847;
+  background: linear-gradient(90deg,#302b1d,#151a17);
+  animation: wavePulse 1.1s ease-in-out infinite alternate;
+}
+.wave-status.intermission span { color: #f1d991; }
+@keyframes wavePulse { from { box-shadow: 0 0 0 #d5a84700; } to { box-shadow: 0 0 14px #d5a84733; } }
+
 canvas {
   display: block;
   width: 100%;
@@ -331,6 +355,7 @@ canvas {
 
 @media(max-width:760px) {
   .gamecontrols label:first-of-type { margin-left: 0; }
+  .wave-status { font-size: 9px; padding: 8px; }
   body { padding: 10px; }
   .panel { padding: 14px; }
   .modes { grid-template-columns: repeat(2,1fr); }
