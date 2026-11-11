@@ -126,9 +126,14 @@
   <div class="gamebar">
     <b id="modeLabel">ATTACK</b>
     <span>WAVE <b id="level">1</b></span>
+    <span>HOSTILES <b id="enemyCount">0</b></span>
     <span>HEALTH <b id="hp">100</b></span>
     <span>AMMO <b id="ammo">12/36</b></span>
     <span>CREDITS <b id="gameCoins">0</b></span>
+  </div>
+  <div id="waveStatus" class="wave-status" aria-live="polite">
+    <b id="waveHeadline">WAVE 1</b>
+    <span id="waveDetail">HOSTILES REMAINING</span>
   </div>
   <canvas id="screen" width="900" height="520"></canvas>
   <div class="gamecontrols">
@@ -143,6 +148,6 @@
 
 <div id="message" role="status">SYSTEM READY — SELECT YOUR OPERATION</div>
 </main>
-<script src="script.js?v=unique-mode-maps-20261111"></script>
+<script src="script.js?v=progressive-waves-20261111"></script>
 </body>
 </html>
