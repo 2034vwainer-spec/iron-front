@@ -59,33 +59,61 @@
     <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
     <div class="distant-hills"></div><div class="bus-shadow"></div>
     <div class="transport">
-      <svg class="bus-art" viewBox="0 0 1000 300" role="img" aria-label="IRON FRONT military transport bus">
+      <svg class="bus-art" viewBox="0 0 1100 330" role="img" aria-label="Detailed IRON FRONT military transport bus">
         <defs>
-          <linearGradient id="bodyPaint" x2="0" y2="1"><stop stop-color="#b4bd98"/><stop offset=".2" stop-color="#748565"/><stop offset=".65" stop-color="#405640"/><stop offset="1" stop-color="#1b2a22"/></linearGradient>
-          <linearGradient id="glass" x2="1" y2="1"><stop stop-color="#d9e9e3"/><stop offset=".3" stop-color="#78999a"/><stop offset="1" stop-color="#142a32"/></linearGradient>
-          <linearGradient id="rubber" x2="0" y2="1"><stop stop-color="#3b443d"/><stop offset=".5" stop-color="#080c0a"/><stop offset="1" stop-color="#252e28"/></linearGradient>
-          <pattern id="tread" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="4" height="10" fill="#899184"/></pattern>
-          <filter id="shadow" x="-20%" y="-30%" width="140%" height="180%"><feGaussianBlur stdDeviation="8"/></filter>
+          <linearGradient id="armor" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#c0c5a1"/><stop offset=".13" stop-color="#879477"/><stop offset=".48" stop-color="#596b4e"/><stop offset=".82" stop-color="#354737"/><stop offset="1" stop-color="#1a271f"/></linearGradient>
+          <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d1d4b2"/><stop offset="1" stop-color="#647457"/></linearGradient>
+          <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#edf3e8"/><stop offset=".18" stop-color="#9bb9b3"/><stop offset=".52" stop-color="#496c70"/><stop offset="1" stop-color="#152c34"/></linearGradient>
+          <linearGradient id="tire" x2="0" y2="1"><stop stop-color="#3c443e"/><stop offset=".35" stop-color="#090e0b"/><stop offset="1" stop-color="#252d28"/></linearGradient>
+          <linearGradient id="metal" x2="0" y2="1"><stop stop-color="#aeb69a"/><stop offset="1" stop-color="#4a5945"/></linearGradient>
+          <pattern id="rubberTread" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="5" height="12" fill="#a0a58e" opacity=".45"/></pattern>
+          <filter id="softShadow" x="-20%" y="-40%" width="140%" height="200%"><feGaussianBlur stdDeviation="10"/></filter>
+          <filter id="lightGlow"><feGaussianBlur stdDeviation="6"/></filter>
         </defs>
-        <ellipse cx="490" cy="260" rx="420" ry="22" fill="#050b08" opacity=".7" filter="url(#shadow)"/>
-        <path d="M78 202 H850 Q894 202 920 230 L911 251 H77Z" fill="#111c16" stroke="#0a100c" stroke-width="8"/>
-        <path d="M80 106 Q86 65 137 57 L701 48 Q770 47 817 83 L894 148 Q918 169 918 204 L906 224 H74Z" fill="url(#bodyPaint)" stroke="#17251c" stroke-width="10"/>
-        <path d="M100 102 Q112 73 151 68 L695 59 Q755 58 795 91 L856 145 H91Z" fill="#d4d9b4" opacity=".16"/>
-        <path d="M93 178 H905 V211 H84Z" fill="#293b2d"/><path d="M90 184 H899" stroke="#c2c49a" stroke-width="4" opacity=".7"/>
-        <path d="M119 91 Q129 76 157 74 L694 65 Q749 64 781 92 L817 137 H104Z" fill="url(#glass)" stroke="#172a2b" stroke-width="10"/>
-        <path d="M191 74 V137 M300 72 V137 M409 70 V137 M518 68 V137 M627 67 V137" stroke="#192d2d" stroke-width="9"/>
-        <path d="M126 84 L700 74" stroke="#f4f5e8" stroke-width="4" opacity=".4"/>
-        <path d="M785 92 L864 153 Q884 170 887 198 L878 213 H816 L807 147Z" fill="#627654" stroke="#18271f" stroke-width="8"/>
-        <path d="M808 105 L856 151 Q875 169 875 189 H821Z" fill="url(#glass)" stroke="#182d2e" stroke-width="8"/>
-        <path d="M820 113 L851 154" stroke="#fff" stroke-width="4" opacity=".35"/>
-        <path d="M887 174 L909 184 V201 H884Z" fill="#f0dfa0" stroke="#26382b" stroke-width="4"/>
-        <path d="M734 143 V207 M795 145 V207" stroke="#24372a" stroke-width="5"/><rect x="754" y="174" width="6" height="16" rx="2" fill="#d6d5aa"/>
-        <rect x="343" y="151" width="230" height="34" rx="4" fill="#17251d" stroke="#b6a66d" stroke-width="2"/>
-        <text x="458" y="174" fill="#eee4bd" font-family="Arial,sans-serif" font-size="20" font-weight="900" letter-spacing="4" text-anchor="middle">IRON FRONT</text>
-        <path d="M125 151 H198 V173 H125Z" fill="#344638" stroke="#1a2a20" stroke-width="3"/><path d="M136 158 H187 M136 166 H187" stroke="#b6bd99" stroke-width="2"/>
-        <g class="wheel-spin" transform-origin="220px 225px"><circle cx="220" cy="224" r="43" fill="#080d0b" stroke="#667064" stroke-width="5"/><circle cx="220" cy="224" r="33" fill="url(#rubber)" stroke="#111a15" stroke-width="4"/><circle cx="220" cy="224" r="24" fill="url(#tread)" stroke="#8a9480" stroke-width="4"/><circle cx="220" cy="224" r="14" fill="#aab096" stroke="#303c32" stroke-width="5"/><circle cx="220" cy="224" r="5" fill="#1a241d"/><path d="M220 202 V246 M198 224 H242 M204 208 L236 240 M236 208 L204 240" stroke="#d4d7b8" stroke-width="3"/></g>
-        <g class="wheel-spin" transform-origin="690px 225px"><circle cx="690" cy="224" r="43" fill="#080d0b" stroke="#667064" stroke-width="5"/><circle cx="690" cy="224" r="33" fill="url(#rubber)" stroke="#111a15" stroke-width="4"/><circle cx="690" cy="224" r="24" fill="url(#tread)" stroke="#8a9480" stroke-width="4"/><circle cx="690" cy="224" r="14" fill="#aab096" stroke="#303c32" stroke-width="5"/><circle cx="690" cy="224" r="5" fill="#1a241d"/><path d="M690 202 V246 M668 224 H712 M674 208 L706 240 M706 208 L674 240" stroke="#d4d7b8" stroke-width="3"/></g>
-        <path d="M96 207 H150 M768 207 H822" stroke="#c4c69b" stroke-width="3" opacity=".7"/><path d="M110 55 L147 43 H698 Q755 44 794 76" fill="none" stroke="#dce0bd" stroke-width="5" opacity=".7"/>
+        <ellipse cx="535" cy="280" rx="445" ry="25" fill="#050b08" opacity=".75" filter="url(#softShadow)"/>
+        <!-- chassis -->
+        <path d="M70 215 H948 Q1004 215 1030 246 L1020 269 H73Z" fill="#101a14" stroke="#090f0b" stroke-width="8"/>
+        <path d="M91 226 H1007 L991 248 H86Z" fill="#4b5d45" stroke="#1b2b20" stroke-width="4"/>
+        <path d="M104 237 H985" stroke="#b6bb91" stroke-width="3" opacity=".55"/>
+        <!-- main armored coach body -->
+        <path d="M66 113 Q70 68 129 56 L802 45 Q865 45 912 82 L1010 161 Q1040 184 1040 218 L1026 239 H64Z" fill="url(#armor)" stroke="#17241b" stroke-width="11"/>
+        <path d="M89 108 Q98 76 145 68 L797 57 Q855 57 895 91 L974 157 H81Z" fill="url(#roof)" opacity=".45"/>
+        <path d="M72 187 H1027 V224 H68Z" fill="#344735"/>
+        <path d="M80 193 H1024" stroke="#d1d0a4" stroke-width="4" opacity=".65"/>
+        <!-- large continuous side windows -->
+        <path d="M126 91 Q139 75 169 73 L794 64 Q851 63 887 94 L949 151 H99Z" fill="url(#glass)" stroke="#17292a" stroke-width="11"/>
+        <path d="M191 74 L191 151 M310 72 L310 151 M429 70 L429 151 M548 68 L548 151 M667 66 L667 151 M786 65 L786 151" stroke="#1b2b2b" stroke-width="10"/>
+        <path d="M119 91 L790 80" stroke="#f4f4e6" stroke-width="5" opacity=".34"/>
+        <path d="M142 84 L181 78 L181 147 H116Z" fill="#fff" opacity=".11"/>
+        <!-- front cabin / windshield -->
+        <path d="M884 94 L982 169 Q1008 189 1010 220 H919 L904 154Z" fill="#687958" stroke="#17251c" stroke-width="8"/>
+        <path d="M910 108 L974 164 Q994 181 996 205 H927Z" fill="url(#glass)" stroke="#1a2c2d" stroke-width="9"/>
+        <path d="M920 117 L970 166" stroke="#f4f5e9" stroke-width="5" opacity=".35"/>
+        <path d="M1004 187 L1031 202 V221 H1004Z" fill="#eee1a9" stroke="#26372a" stroke-width="4"/>
+        <ellipse cx="1018" cy="204" rx="16" ry="9" fill="#fff0bd" opacity=".75" filter="url(#lightGlow)"/>
+        <path d="M1010 232 H1031" stroke="#e3d6a2" stroke-width="5"/>
+        <!-- access door and body details -->
+        <path d="M822 144 V226 M884 143 V226" stroke="#25372a" stroke-width="6"/>
+        <path d="M838 162 H868" stroke="#c0c39b" stroke-width="4"/><rect x="853" y="176" width="7" height="18" rx="2" fill="#e0d9ae"/>
+        <rect x="112" y="163" width="92" height="25" rx="3" fill="#3d503c" stroke="#1c2b20" stroke-width="3"/>
+        <path d="M125 171 H190 M125 179 H190" stroke="#b6bd9a" stroke-width="2" opacity=".65"/>
+        <path d="M230 166 H317 M230 173 H317" stroke="#26382a" stroke-width="4"/>
+        <rect x="385" y="164" width="248" height="39" rx="4" fill="#18271d" stroke="#b4a56f" stroke-width="2"/>
+        <text x="509" y="190" fill="#eee5c4" font-family="Arial,sans-serif" font-size="22" font-weight="900" letter-spacing="5" text-anchor="middle">IRON FRONT</text>
+        <path d="M656 169 H744" stroke="#293a2c" stroke-width="8"/><path d="M662 168 H739" stroke="#c0c29a" stroke-width="2"/>
+        <g fill="#17251c" stroke="#a8ae88" stroke-width="2"><circle cx="105" cy="205" r="4"/><circle cx="290" cy="205" r="4"/><circle cx="750" cy="205" r="4"/><circle cx="965" cy="225" r="4"/></g>
+        <!-- roof equipment and antenna -->
+        <path d="M170 54 L202 38 H742 L783 48" fill="none" stroke="#d3d5b0" stroke-width="6" opacity=".8"/>
+        <rect x="355" y="27" width="280" height="18" rx="5" fill="#3b4b37" stroke="#1a281e" stroke-width="4"/>
+        <path d="M382 26 V13 H608 V26" fill="#778465" stroke="#1b291f" stroke-width="4"/>
+        <path d="M716 49 L735 24 L744 49 M730 26 V11" fill="none" stroke="#27382a" stroke-width="4"/>
+        <path d="M92 109 L65 98 L56 107" fill="none" stroke="#18261d" stroke-width="7"/>
+        <path d="M66 98 L42 91" stroke="#d2d5b2" stroke-width="4"/>
+        <!-- three heavy wheels -->
+        <g class="wheel-spin" transform-origin="210px 246px"><circle cx="210" cy="245" r="47" fill="#080d0a" stroke="#70796b" stroke-width="6"/><circle cx="210" cy="245" r="37" fill="url(#tire)" stroke="#111a14" stroke-width="5"/><circle cx="210" cy="245" r="27" fill="url(#rubberTread)" stroke="#929986" stroke-width="4"/><circle cx="210" cy="245" r="17" fill="url(#metal)" stroke="#303d31" stroke-width="5"/><circle cx="210" cy="245" r="6" fill="#1a251d"/><path d="M210 220 V270 M185 245 H235 M192 227 L228 263 M228 227 L192 263" stroke="#d7d9ba" stroke-width="3"/></g>
+        <g class="wheel-spin" transform-origin="535px 246px"><circle cx="535" cy="245" r="47" fill="#080d0a" stroke="#70796b" stroke-width="6"/><circle cx="535" cy="245" r="37" fill="url(#tire)" stroke="#111a14" stroke-width="5"/><circle cx="535" cy="245" r="27" fill="url(#rubberTread)" stroke="#929986" stroke-width="4"/><circle cx="535" cy="245" r="17" fill="url(#metal)" stroke="#303d31" stroke-width="5"/><circle cx="535" cy="245" r="6" fill="#1a251d"/><path d="M535 220 V270 M510 245 H560 M517 227 L553 263 M553 227 L517 263" stroke="#d7d9ba" stroke-width="3"/></g>
+        <g class="wheel-spin" transform-origin="850px 246px"><circle cx="850" cy="245" r="47" fill="#080d0a" stroke="#70796b" stroke-width="6"/><circle cx="850" cy="245" r="37" fill="url(#tire)" stroke="#111a14" stroke-width="5"/><circle cx="850" cy="245" r="27" fill="url(#rubberTread)" stroke="#929986" stroke-width="4"/><circle cx="850" cy="245" r="17" fill="url(#metal)" stroke="#303d31" stroke-width="5"/><circle cx="850" cy="245" r="6" fill="#1a251d"/><path d="M850 220 V270 M825 245 H875 M832 227 L868 263 M868 227 L832 263" stroke="#d7d9ba" stroke-width="3"/></g>
+        <path d="M80 224 H150 M900 230 H985" stroke="#d2d2a7" stroke-width="3" opacity=".55"/>
       </svg>
     </div>
     <div class="ground-blur"></div>
