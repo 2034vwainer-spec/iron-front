@@ -250,7 +250,7 @@ canvas {
 }
 
 .bus-scene {
-  height:245px; overflow:hidden; position:relative; isolation:isolate;
+  height:270px; overflow:hidden; position:relative; isolation:isolate;
   background:linear-gradient(180deg,#102b43 0%,#426b83 49%,#aab9a7 78%,#58674c 100%);
   border:1px solid #526b70; border-radius:9px; margin:18px 0;
 }
@@ -281,7 +281,7 @@ canvas {
   background:#07110f99; filter:blur(8px); animation:shadowPulse 3s ease-in-out infinite;
 }
 .transport {
-  position:absolute; z-index:2; left:3%; top:8px; width:94%;
+  position:absolute; z-index:2; left:5%; top:0; width:90%;
   animation:busFlight 4.2s ease-in-out infinite;
   filter:drop-shadow(0 15px 12px #08110c99) contrast(1.04) saturate(.88);
 }
@@ -298,7 +298,7 @@ canvas {
 @keyframes shadowPulse { 0%,100%{transform:scaleX(1);opacity:.6} 50%{transform:scaleX(.82);opacity:.3} }
 @keyframes landscape { to{background-position:950px 0} }
 @keyframes road { to{background-position:-130px 0} }
-@media(max-width:760px){.bus-scene{height:190px}.transport{top:12px;width:100%;left:0}}
+@media(max-width:760px){.bus-scene{height:225px}.transport{top:4px;width:96%;left:2%}}
 
 #message {
   min-height: 24px;
