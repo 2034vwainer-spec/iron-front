@@ -438,12 +438,44 @@ function render(){
     ctx.fillStyle='#a99a7c';ctx.beginPath();ctx.arc(sx,y+size*.25,size*.105,0,Math.PI*2);ctx.fill();
     ctx.fillStyle=e.boss?'#352c28':'#26372d';ctx.beginPath();ctx.arc(sx,y+size*.205,size*.15,Math.PI,Math.PI*2);ctx.lineTo(sx+size*.14,y+size*.22);ctx.quadraticCurveTo(sx,y+size*.28,sx-size*.14,y+size*.22);ctx.closePath();ctx.fill();
     ctx.fillStyle='#101a16';ctx.fillRect(sx-size*.13,y+size*.22,size*.26,size*.035);
-     // Fictional compact energy blaster held across the enemy's front
-     ctx.save();ctx.translate(sx+bodyW*.24,y+size*.57);ctx.rotate(-.12);
-     ctx.fillStyle='#171e1b';ctx.fillRect(-size*.025,-size*.025,size*.24,size*.065);
-     ctx.fillStyle=e.boss?'#b46a43':'#788b75';ctx.fillRect(size*.10,-size*.018,size*.12,size*.035);
-     ctx.fillStyle='#d6b65d';ctx.fillRect(size*.205,-size*.012,size*.035,size*.02);
-     ctx.fillStyle='#252b27';ctx.fillRect(size*.025,size*.025,size*.055,size*.09);
+     // Clearly visible fictional sci-fi blaster for every enemy.
+     // Its bright energy core and muzzle make it readable even at a distance.
+     ctx.save();
+     const blasterLength=Math.max(19,Math.min(76,size*.62));
+     const blasterHeight=Math.max(5,blasterLength*.19);
+     ctx.translate(sx+bodyW*.02,y+size*.59);
+     ctx.rotate(-.10);
+     ctx.lineJoin='round';
+     ctx.fillStyle='#080e0c';
+     ctx.strokeStyle='#aab79b';
+     ctx.lineWidth=Math.max(1.2,blasterLength*.025);
+     ctx.beginPath();
+     ctx.moveTo(-blasterLength*.55,-blasterHeight*.28);
+     ctx.lineTo(-blasterLength*.38,-blasterHeight*.52);
+     ctx.lineTo(blasterLength*.48,-blasterHeight*.40);
+     ctx.lineTo(blasterLength*.61,-blasterHeight*.12);
+     ctx.lineTo(blasterLength*.57,blasterHeight*.22);
+     ctx.lineTo(-blasterLength*.45,blasterHeight*.38);
+     ctx.closePath();ctx.fill();ctx.stroke();
+     ctx.fillStyle=e.boss?'#75483a':'#526b57';
+     ctx.fillRect(-blasterLength*.34,-blasterHeight*.34,blasterLength*.68,blasterHeight*.68);
+     ctx.fillStyle='#1c2a25';
+     ctx.fillRect(-blasterLength*.20,blasterHeight*.34,blasterLength*.18,blasterHeight*.70);
+     ctx.fillStyle=e.boss?'#ffb45b':'#75e4d3';
+     ctx.shadowBlur=Math.max(4,blasterLength*.14);
+     ctx.shadowColor=e.boss?'#ff9d42':'#49e6d2';
+     ctx.fillRect(-blasterLength*.08,-blasterHeight*.18,blasterLength*.27,blasterHeight*.36);
+     ctx.shadowBlur=0;
+     ctx.fillStyle='#c8d7c5';
+     ctx.fillRect(blasterLength*.20,-blasterHeight*.25,blasterLength*.34,blasterHeight*.50);
+     ctx.fillStyle='#17231f';
+     ctx.fillRect(blasterLength*.47,-blasterHeight*.16,blasterLength*.15,blasterHeight*.32);
+     ctx.fillStyle=e.boss?'#ffcf78':'#a4fff2';
+     ctx.beginPath();ctx.arc(blasterLength*.58,0,Math.max(2,blasterHeight*.38),0,Math.PI*2);ctx.fill();
+     ctx.fillStyle='#26342d';
+     ctx.fillRect(-blasterLength*.04,blasterHeight*.25,blasterLength*.14,blasterHeight*.56);
+     ctx.strokeStyle='#d9e4ce';ctx.lineWidth=Math.max(1,blasterLength*.018);
+     ctx.beginPath();ctx.moveTo(-blasterLength*.30,-blasterHeight*.20);ctx.lineTo(blasterLength*.17,-blasterHeight*.20);ctx.stroke();
      ctx.restore();
     // health bar
     ctx.fillStyle='#080d0b';ctx.fillRect(sx-size*.31,y-13,size*.62,7);
