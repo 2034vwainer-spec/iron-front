@@ -147,7 +147,7 @@ function waveSize(wave=level){
   return Math.min(22,base+Math.floor((wave-1)*1.45));
 }
 function spawn(n){
-  enemies=[];
+  enemies=[];enemyBolts=[];
   const spots=[];
   for(let y=1;y<map.length-1;y++)for(let x=1;x<map[0].length-1;x++){
     const sx=x+.5,sy=y+.5,d=Math.hypot(sx-player.x,sy-player.y);
