@@ -48,6 +48,15 @@
 <section id="online" class="panel hidden">
   <div class="section-head"><div><p class="eyebrow">ONLINE MULTIPLAYER</p><h2>1V1 PRIVATE MATCH</h2></div><button id="onlineBack">← BACK</button></div>
   <p class="muted">Create a room and share its code, or enter your friend's code to join.</p>
+  <div class="turn-setup">
+    <h3>INTERNET RELAY SETUP</h3>
+    <p class="muted">Each player needs TURN credentials on their own device for networks that block direct connections.</p>
+    <p><a href="https://www.metered.ca/tools/openrelay/" target="_blank" rel="noopener">Open Relay setup instructions</a></p>
+    <input id="turnHost" placeholder="APP ADDRESS, e.g. mygame.metered.live" autocomplete="off">
+    <input id="turnApiKey" type="password" placeholder="TURN API KEY" autocomplete="off">
+    <button id="loadTurn">LOAD RELAY</button>
+    <p id="turnStatus" class="online-status">TURN RELAY NOT CONFIGURED ON THIS DEVICE.</p>
+  </div>
   <div class="actions"><button id="createRoom" class="primary">CREATE ROOM</button></div>
   <div id="roomCreated" class="hidden"><p class="eyebrow">YOUR ROOM CODE</p><h2 id="roomCode" class="room-code">------</h2><button id="copyRoomCode">COPY ROOM CODE</button><p id="roomStatus" class="muted">Waiting for the other player...</p></div>
   <div class="join-row"><input id="joinCode" maxlength="8" placeholder="ENTER 8-CHARACTER CODE" autocomplete="off"><button id="joinRoom">JOIN ROOM</button></div>
@@ -177,6 +186,6 @@
 <div id="message" role="status">SYSTEM READY — SELECT YOUR OPERATION</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';"></script>
-<script src="script.js?v=online-peerjs-library-fix-20261112"></script>
+<script src="script.js?v=turn-relay-setup-20261112"></script>
 </body>
 </html>
