@@ -431,6 +431,13 @@ function render(){
     ctx.fillStyle='#a99a7c';ctx.beginPath();ctx.arc(sx,y+size*.25,size*.105,0,Math.PI*2);ctx.fill();
     ctx.fillStyle=e.boss?'#352c28':'#26372d';ctx.beginPath();ctx.arc(sx,y+size*.205,size*.15,Math.PI,Math.PI*2);ctx.lineTo(sx+size*.14,y+size*.22);ctx.quadraticCurveTo(sx,y+size*.28,sx-size*.14,y+size*.22);ctx.closePath();ctx.fill();
     ctx.fillStyle='#101a16';ctx.fillRect(sx-size*.13,y+size*.22,size*.26,size*.035);
+     // Fictional compact energy blaster held across the enemy's front
+     ctx.save();ctx.translate(sx+bodyW*.24,y+size*.57);ctx.rotate(-.12);
+     ctx.fillStyle='#171e1b';ctx.fillRect(-size*.025,-size*.025,size*.24,size*.065);
+     ctx.fillStyle=e.boss?'#b46a43':'#788b75';ctx.fillRect(size*.10,-size*.018,size*.12,size*.035);
+     ctx.fillStyle='#d6b65d';ctx.fillRect(size*.205,-size*.012,size*.035,size*.02);
+     ctx.fillStyle='#252b27';ctx.fillRect(size*.025,size*.025,size*.055,size*.09);
+     ctx.restore();
     // health bar
     ctx.fillStyle='#080d0b';ctx.fillRect(sx-size*.31,y-13,size*.62,7);
     ctx.fillStyle='#ce5146';ctx.fillRect(sx-size*.30,y-12,size*.60*Math.max(0,e.hp/e.max),5);
