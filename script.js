@@ -203,6 +203,8 @@ function finishReload(now){
   }
 }
 $('reload').onclick=reload;
+$('autoAimToggle').onchange=e=>{autoAim=e.target.checked;if(autoAim)$('autoFireToggle').checked=true;autoFire=$('autoFireToggle').checked;say('AUTO AIM '+(autoAim?'ON':'OFF'))};
+$('autoFireToggle').onchange=e=>{autoFire=e.target.checked;if(autoFire&&!autoAim){autoAim=true;$('autoAimToggle').checked=true}say('AUTO FIRE '+(autoFire?'ON':'OFF'))};
 
 window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='r')reload();if(e.key==='Escape'&&playing)$('pause').click()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 let lastMouseX=null;canvas.addEventListener('pointermove',e=>{let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*canvas.width/r.width;if(lastMouseX!==null)player.a+=(x-lastMouseX)/canvas.width*2.1;lastMouseX=x});canvas.addEventListener('pointerleave',()=>lastMouseX=null);
@@ -212,11 +214,15 @@ function nearestVisibleEnemy(){let best=null,bestD=16;for(const e of enemies){co
 function fire(){
   const now=performance.now();
   if(!playing||paused||reloadUntil>now||now-lastShot<gun().rate)return;
-  let target=null,best=autoAim?16:.14;
-  enemies.forEach(e=>{
-    const d=Math.hypot(e.x-player.x,e.y-player.y),a=Math.atan2(e.y-player.y,e.x-player.x),diff=Math.abs(angleDiff(a,player.a));
-    if(d<(autoAim?16:14)&&diff<best&&!blocked(player.x,player.y,e.x,e.y)){best=autoAim?d:diff;target=e}
-  });
+  let target=null;
+  if(autoAim){target=nearestVisibleEnemy()}
+  else{
+    let best=.14;
+    enemies.forEach(e=>{
+      const d=Math.hypot(e.x-player.x,e.y-player.y),a=Math.atan2(e.y-player.y,e.x-player.x),diff=Math.abs(angleDiff(a,player.a));
+      if(d<14&&diff<best&&!blocked(player.x,player.y,e.x,e.y)){best=diff;target=e}
+    });
+  }
   if(ammo<=0){
     if(now-emptyMessageAt>1200){say('MAGAZINE EMPTY — PRESS R TO RELOAD');emptyMessageAt=now}
     return;
@@ -499,6 +505,6 @@ function finishGameOver(reason){
   say('GAME OVER');
 }
 function update(dt){const aimTarget=autoAim?nearestVisibleEnemy():null;if(aimTarget){const desired=Math.atan2(aimTarget.y-player.y,aimTarget.x-player.x),turn=angleDiff(desired,player.a);player.a+=Math.sign(turn)*Math.min(Math.abs(turn),5.5*dt)}let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft&&!autoAim)player.a-=2*dt;if(keys.arrowright&&!autoAim)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}if(d<11&&d>.9&&performance.now()>=e.nextShot&&!blocked(e.x,e.y,player.x,player.y)){const a=Math.atan2(player.y-e.y,player.x-e.x);enemyBolts.push({x:e.x,y:e.y,vx:Math.cos(a)*5.2,vy:Math.sin(a)*5.2,life:2.5});e.nextShot=performance.now()+(e.boss?1250:2050)+Math.random()*650}});enemyBolts=enemyBolts.filter(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(wall(b.x,b.y)||b.life<=0)return false;if(Math.hypot(b.x-player.x,b.y-player.y)<.25){const damage=Math.max(2,8*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage;return false}return true});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
-function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);if(mouseDown)fire();render();hud();requestAnimationFrame(loop)}
+function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);if(autoFire||mouseDown)fire();render();hud();requestAnimationFrame(loop)}
 hud();
 })();
