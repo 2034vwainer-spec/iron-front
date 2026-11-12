@@ -50,7 +50,7 @@
   <p class="muted">Create a room and share its code, or enter your friend's code to join.</p>
   <div class="actions"><button id="createRoom" class="primary">CREATE ROOM</button></div>
   <div id="roomCreated" class="hidden"><p class="eyebrow">YOUR ROOM CODE</p><h2 id="roomCode" class="room-code">------</h2><p id="roomStatus" class="muted">Waiting for the other player...</p></div>
-  <div class="join-row"><input id="joinCode" maxlength="6" placeholder="ENTER 6-CHARACTER CODE" autocomplete="off"><button id="joinRoom">JOIN ROOM</button></div>
+  <div class="join-row"><input id="joinCode" maxlength="8" placeholder="ENTER 8-CHARACTER CODE" autocomplete="off"><button id="joinRoom">JOIN ROOM</button></div>
   <p id="onlineStatus" class="online-status" aria-live="polite">ONLINE SYSTEM READY</p>
 </section>
 
@@ -177,6 +177,6 @@
 <div id="message" role="status">SYSTEM READY — SELECT YOUR OPERATION</div>
 </main>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="script.js?v=machine-gun-rapid-fire-20261112"></script>
+<script src="script.js?v=online-room-connection-fix-20261112"></script>
 </body>
 </html>
