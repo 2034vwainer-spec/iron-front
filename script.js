@@ -53,7 +53,7 @@ function joinOnlineRoom(){
   if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE');return}
   const code=$('joinCode').value.trim().toUpperCase();
   if(!/^[A-Z0-9]{6}$/.test(code)){onlineStatus('ENTER A VALID 6-CHARACTER ROOM CODE');return}
-  closeOnline();show('online');onlineStatus('CONNECTING TO ROOM '+code+'...');
+  closeOnline();$('roomCreated').classList.add('hidden');show('online');onlineStatus('CONNECTING TO ROOM '+code+'...');
   peer=new Peer();
   peer.on('open',()=>{const conn=peer.connect('ironfront-'+code.toLowerCase(),{reliable:true});setupConnection(conn,'guest')});
   peer.on('error',()=>onlineStatus('COULD NOT CONNECT — CHECK THE CODE AND TRY AGAIN'));
