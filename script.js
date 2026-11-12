@@ -87,6 +87,7 @@ function createRoomAttempt(attempt=0){
   const thisPeer=peer;
   thisPeer.on('open',()=>{
     if(peer!==thisPeer)return;
+    clearConnectionTimer();
     roomCodeValue=code;$('roomCode').textContent=code;$('roomCreated').classList.remove('hidden');
     $('roomStatus').textContent='Room is online. Share this code with one friend.';
     onlineStatus('ROOM READY — SHARE THE CODE NOW.');
@@ -95,8 +96,10 @@ function createRoomAttempt(attempt=0){
     if(peer!==thisPeer||peerConn){try{conn.close()}catch(e){}return}
     setupConnection(conn,'host');
   });
+  connectionTimer=setTimeout(()=>{if(peer===thisPeer&&!thisPeer.open&&!roomCodeValue){peer=null;try{thisPeer.destroy()}catch(e){}onlineStatus('ONLINE SERVER DID NOT RESPOND — TRY CREATE ROOM AGAIN.')}},18000);
   thisPeer.on('error',err=>{
     if(peer!==thisPeer)return;
+    clearConnectionTimer();
     if(err&&err.type==='unavailable-id'&&attempt<4){
       try{thisPeer.destroy()}catch(e){}
       peer=null;createRoomAttempt(attempt+1);return;
@@ -121,12 +124,15 @@ function joinOnlineRoom(){
   const thisPeer=peer;
   thisPeer.on('open',()=>{
     if(peer!==thisPeer)return;
+    clearConnectionTimer();
     onlineStatus('ROOM FOUND — CONNECTING TO PLAYER...');
     const conn=thisPeer.connect('ironfront-'+code.toLowerCase(),{reliable:true,metadata:{game:'IRON FRONT'}});
     setupConnection(conn,'guest');
   });
+  connectionTimer=setTimeout(()=>{if(peer===thisPeer&&!thisPeer.open){peer=null;try{thisPeer.destroy()}catch(e){}onlineStatus('ONLINE SERVER DID NOT RESPOND — REFRESH AND TRY AGAIN.')}},18000);
   thisPeer.on('error',err=>{
     if(peer!==thisPeer)return;
+    clearConnectionTimer();
     peerErrorMessage(err,'join');
   });
 }
@@ -134,6 +140,7 @@ $('onlinePlay').onclick=()=>{show('online');onlineStatus('CREATE A ROOM OR JOIN 
 $('onlineBack').onclick=()=>{closeOnline();show('menu')};
 $('createRoom').onclick=createOnlineRoom;
 $('joinRoom').onclick=joinOnlineRoom;
+$('copyRoomCode').onclick=()=>{if(!roomCodeValue)return;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(roomCodeValue).then(()=>onlineStatus('ROOM CODE COPIED — SEND IT TO YOUR FRIEND.')).catch(()=>onlineStatus('SELECT THE CODE AND COPY IT MANUALLY.'))}else onlineStatus('SELECT THE CODE AND COPY IT MANUALLY.')};
 
 const guns=[{name:'PISTOL',cost:0,damage:25,clip:12,rate:330},{name:'AK-47',cost:650,damage:22,clip:30,rate:125},{name:'DESERT EAGLE',cost:900,damage:60,clip:7,rate:470},{name:'MACHINE GUN',cost:1600,damage:18,clip:100,rate:45}];
 const vests=[{name:'LIGHT VEST',cost:300,protection:15},{name:'REINFORCED VEST',cost:700,protection:30},{name:'HEAVY ARMOR',cost:1200,protection:50}];
