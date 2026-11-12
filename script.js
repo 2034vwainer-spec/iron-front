@@ -29,7 +29,9 @@ function setupConnection(conn,role){
       else {remotePlayer.x=data.x;remotePlayer.y=data.y;remotePlayer.a=data.a;remotePlayer.hp=data.hp}
     }else if(data.type==='hit'){
       hp=Math.max(0,hp-(Number(data.damage)||0));hud();
-      if(hp<=0)finishGameOver('DEFEATED IN ONLINE DUEL');
+      if(hp<=0){sendNet({type:'won'});finishGameOver('DEFEATED IN ONLINE DUEL');}
+    }else if(data.type==='won'){
+      finishGameOver('YOU WON THE ONLINE DUEL');
     }else if(data.type==='leave'){
       onlineStatus('OPPONENT LEFT THE MATCH');say('OPPONENT DISCONNECTED');
     }
