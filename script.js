@@ -2,7 +2,7 @@
 // Manual controls only: automatic aiming and automatic firing are removed.
 
 const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext('2d');
-let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,mouseDown=false,keys={},enemies=[],enemyBolts=[],player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0;
+let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,keys={},enemies=[],enemyBolts=[],player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0;
 const guns=[{name:'PISTOL',cost:0,damage:25,clip:12,rate:330},{name:'AK-47',cost:650,damage:22,clip:30,rate:125},{name:'DESERT EAGLE',cost:900,damage:60,clip:7,rate:470},{name:'MACHINE GUN',cost:1600,damage:18,clip:100,rate:65}];
 const vests=[{name:'LIGHT VEST',cost:300,protection:15},{name:'REINFORCED VEST',cost:700,protection:30},{name:'HEAVY ARMOR',cost:1200,protection:50}];
 let owned=['PISTOL'];
@@ -217,7 +217,7 @@ function fire(){
   // Manual shot only: the crosshair direction must intersect the enemy's small on-screen hit area.
   enemies.forEach(e=>{
     const d=Math.hypot(e.x-player.x,e.y-player.y),a=Math.atan2(e.y-player.y,e.x-player.x),diff=Math.abs(angleDiff(a,player.a));
-    const hitAngle=Math.atan2(.20,d);
+    const hitAngle=Math.atan2(.07,d);
     if(d<14&&diff<=hitAngle&&diff<best&&!blocked(player.x,player.y,e.x,e.y)){best=diff;target=e}
   });
   if(ammo<=0){
@@ -524,7 +524,7 @@ function render(){
 }
 function finishGameOver(reason){
   if(!playing)return;
-  playing=false;paused=false;mouseDown=false;waveBreakUntil=0;reloadUntil=0;keys={};
+  playing=false;paused=false;waveBreakUntil=0;reloadUntil=0;keys={};
   $('gameOverReason').textContent=reason;
   $('gameOverWave').textContent=level;
   $('gameOverCredits').textContent=coins;
