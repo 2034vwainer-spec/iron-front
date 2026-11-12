@@ -3,60 +3,132 @@
 
 const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext('2d');
 let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,keys={},enemies=[],enemyBolts=[],player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0,mouseHeld=false;
-let peer=null,peerConn=null,onlineRole='',onlineReady=false,remotePlayer=null,lastNetSend=0,roomCodeValue='';
+let peer=null,peerConn=null,onlineRole='',onlineReady=false,remotePlayer=null,lastNetSend=0,roomCodeValue='',connectionTimer=null;
 const remoteStart={host:{x:21.5,y:11.5,a:Math.PI},guest:{x:2.5,y:11.5,a:0}};
+const peerConfig={debug:1,config:{iceServers:[
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'stun:stun.cloudflare.com:3478'}
+],sdpSemantics:'unified-plan'}};
 function onlineStatus(message){$('onlineStatus').textContent=message}
 function sendNet(data){if(peerConn&&peerConn.open)peerConn.send(data)}
+function clearConnectionTimer(){if(connectionTimer){clearTimeout(connectionTimer);connectionTimer=null}}
 function closeOnline(){
-  onlineReady=false;remotePlayer=null;peerConn=null;
+  clearConnectionTimer();onlineReady=false;remotePlayer=null;
+  if(peerConn){try{peerConn.close()}catch(e){}peerConn=null}
   if(peer){try{peer.destroy()}catch(e){}peer=null}
   roomCodeValue='';onlineRole='';
+  if($('roomCreated'))$('roomCreated').classList.add('hidden');
+}
+function peerErrorMessage(err,phase){
+  const type=err&&err.type?err.type:'unknown';
+  const messages={
+    'peer-unavailable':'ROOM NOT FOUND — CHECK THE CODE. THE HOST MUST KEEP THE ROOM OPEN.',
+    'network':'CANNOT REACH THE ONLINE SIGNAL SERVER. CHECK BOTH INTERNET CONNECTIONS.',
+    'server-error':'ONLINE SIGNAL SERVER ERROR. TRY CREATING A NEW ROOM.',
+    'socket-error':'CONNECTION SERVER ERROR. REFRESH AND TRY AGAIN.',
+    'socket-closed':'CONNECTION SERVER CLOSED. REFRESH AND TRY AGAIN.',
+    'unavailable-id':'ROOM CODE ALREADY IN USE. CREATE A NEW ROOM.',
+    'invalid-id':'INVALID ROOM CODE. CREATE A NEW ROOM.',
+    'browser-incompatible':'THIS BROWSER DOES NOT SUPPORT THE ONLINE CONNECTION.',
+    'webrtc':'DIRECT CONNECTION FAILED. THIS NETWORK MAY REQUIRE A RELAY SERVER (TURN).',
+    'disconnected':'CONNECTION TO THE ONLINE SERVER WAS LOST.'
+  };
+  onlineStatus(messages[type]||('CONNECTION FAILED ('+type+'). '+(phase==='join'?'CHECK THE CODE AND TRY AGAIN.':'CREATE A NEW ROOM.')));
 }
 function enterOnlineGame(role){
-  onlineRole=role;onlineReady=true;mode='DUEL';level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;
+  onlineRole=role;onlineReady=true;level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;
   configureMap();player={...remoteStart[role]};ammo=gun().clip;reserve=gun().clip*3;
   enemies=[];enemyBolts=[];remotePlayer={...remoteStart[role==='host'?'guest':'host'],hp:100,a:role==='host'?Math.PI:0};
-  launch();
-  say('ONLINE 1V1 CONNECTED — FIGHT!');
+  launch();say('ONLINE 1V1 CONNECTED — FIGHT!');
 }
 function setupConnection(conn,role){
+  if(peerConn&&peerConn!==conn){try{conn.close()}catch(e){}return}
   peerConn=conn;
-  conn.on('open',()=>{onlineStatus('PLAYER CONNECTED — STARTING MATCH');$('roomStatus').textContent='Opponent connected!';enterOnlineGame(role);sendNet({type:'hello',role});});
+  clearConnectionTimer();
+  connectionTimer=setTimeout(()=>{
+    if(!onlineReady&&peerConn===conn){
+      onlineStatus('CONNECTION TIMED OUT — CHECK THE CODE AND TRY AGAIN.');
+      try{conn.close()}catch(e){}
+    }
+  },20000);
+  conn.on('open',()=>{
+    clearConnectionTimer();
+    onlineStatus('PLAYER CONNECTED — STARTING MATCH');
+    if($('roomStatus'))$('roomStatus').textContent='Opponent connected!';
+    enterOnlineGame(role);
+    sendNet({type:'hello',role});
+  });
   conn.on('data',data=>{
     if(!data||typeof data!=='object')return;
     if(data.type==='state'){
       if(!remotePlayer)remotePlayer={x:data.x,y:data.y,a:data.a,hp:data.hp};
-      else {remotePlayer.x=data.x;remotePlayer.y=data.y;remotePlayer.a=data.a;remotePlayer.hp=data.hp}
+      else{remotePlayer.x=data.x;remotePlayer.y=data.y;remotePlayer.a=data.a;remotePlayer.hp=data.hp}
     }else if(data.type==='hit'){
       hp=Math.max(0,hp-(Number(data.damage)||0));hud();
-      if(hp<=0){sendNet({type:'won'});finishGameOver('DEFEATED IN ONLINE DUEL');}
+      if(hp<=0){sendNet({type:'won'});finishGameOver('DEFEATED IN ONLINE DUEL')}
     }else if(data.type==='won'){
-      finishGameOver('YOU WON THE ONLINE DUEL');
+      finishGameOver('YOU WON THE ONLINE DUEL')
     }else if(data.type==='leave'){
-      onlineStatus('OPPONENT LEFT THE MATCH');say('OPPONENT DISCONNECTED');
+      onlineReady=false;onlineStatus('OPPONENT LEFT THE MATCH');say('OPPONENT DISCONNECTED')
     }
   });
-  conn.on('close',()=>{onlineReady=false;onlineStatus('CONNECTION LOST — RETURN TO MENU');say('ONLINE CONNECTION LOST')});
-  conn.on('error',()=>onlineStatus('CONNECTION ERROR — TRY AGAIN'));
+  conn.on('close',()=>{
+    clearConnectionTimer();onlineReady=false;
+    onlineStatus('CONNECTION CLOSED — CREATE A NEW ROOM OR JOIN AGAIN.');
+    if(playing)say('ONLINE CONNECTION LOST');
+  });
+  conn.on('error',err=>peerErrorMessage(err,'join'));
+}
+function createRoomAttempt(attempt=0){
+  const code=Math.random().toString(36).slice(2,10).toUpperCase();
+  const peerId='ironfront-'+code.toLowerCase();
+  onlineStatus('CONNECTING TO ONLINE SERVER...');
+  try{peer=new Peer(peerId,peerConfig)}catch(err){onlineStatus('COULD NOT START ONLINE SERVICE. RELOAD THE PAGE.');return}
+  const thisPeer=peer;
+  thisPeer.on('open',()=>{
+    if(peer!==thisPeer)return;
+    roomCodeValue=code;$('roomCode').textContent=code;$('roomCreated').classList.remove('hidden');
+    $('roomStatus').textContent='Room is online. Share this code with one friend.';
+    onlineStatus('ROOM READY — SHARE THE CODE NOW.');
+  });
+  thisPeer.on('connection',conn=>{
+    if(peer!==thisPeer||peerConn){try{conn.close()}catch(e){}return}
+    setupConnection(conn,'host');
+  });
+  thisPeer.on('error',err=>{
+    if(peer!==thisPeer)return;
+    if(err&&err.type==='unavailable-id'&&attempt<4){
+      try{thisPeer.destroy()}catch(e){}
+      peer=null;createRoomAttempt(attempt+1);return;
+    }
+    peerErrorMessage(err,'host');
+  });
 }
 function createOnlineRoom(){
-  if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE');return}
-  closeOnline();show('online');onlineStatus('CREATING PRIVATE ROOM...');
-  const code=Math.random().toString(36).slice(2,8).toUpperCase();
-  roomCodeValue=code;$('roomCode').textContent=code;$('roomCreated').classList.remove('hidden');
-  peer=new Peer('ironfront-'+code.toLowerCase());
-  peer.on('open',()=>onlineStatus('ROOM READY — SEND THE CODE TO YOUR FRIEND'));
-  peer.on('connection',conn=>{if(peerConn){conn.close();return}setupConnection(conn,'host')});
-  peer.on('error',err=>{onlineStatus(err.type==='unavailable-id'?'CODE COLLISION — CREATE A NEW ROOM':'ROOM ERROR — TRY AGAIN');});
+  if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE.');return}
+  closeOnline();show('online');onlineStatus('PREPARING PRIVATE ROOM...');
+  $('roomCode').textContent='WAIT...';$('roomStatus').textContent='Waiting for online server confirmation...';
+  $('roomCreated').classList.remove('hidden');
+  createRoomAttempt();
 }
 function joinOnlineRoom(){
-  if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE');return}
+  if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE.');return}
   const code=$('joinCode').value.trim().toUpperCase();
-  if(!/^[A-Z0-9]{6}$/.test(code)){onlineStatus('ENTER A VALID 6-CHARACTER ROOM CODE');return}
-  closeOnline();$('roomCreated').classList.add('hidden');show('online');onlineStatus('CONNECTING TO ROOM '+code+'...');
-  peer=new Peer();
-  peer.on('open',()=>{const conn=peer.connect('ironfront-'+code.toLowerCase(),{reliable:true});setupConnection(conn,'guest')});
-  peer.on('error',()=>onlineStatus('COULD NOT CONNECT — CHECK THE CODE AND TRY AGAIN'));
+  if(!/^[A-Z0-9]{8}$/.test(code)){onlineStatus('ENTER THE FULL 8-CHARACTER ROOM CODE.');return}
+  closeOnline();show('online');$('roomCreated').classList.add('hidden');
+  onlineStatus('CONNECTING TO ROOM '+code+'...');
+  try{peer=new Peer(peerConfig)}catch(err){onlineStatus('COULD NOT START ONLINE SERVICE. RELOAD THE PAGE.');return}
+  const thisPeer=peer;
+  thisPeer.on('open',()=>{
+    if(peer!==thisPeer)return;
+    onlineStatus('ROOM FOUND — CONNECTING TO PLAYER...');
+    const conn=thisPeer.connect('ironfront-'+code.toLowerCase(),{reliable:true,metadata:{game:'IRON FRONT'}});
+    setupConnection(conn,'guest');
+  });
+  thisPeer.on('error',err=>{
+    if(peer!==thisPeer)return;
+    peerErrorMessage(err,'join');
+  });
 }
 $('onlinePlay').onclick=()=>{show('online');onlineStatus('CREATE A ROOM OR JOIN WITH A CODE')};
 $('onlineBack').onclick=()=>{closeOnline();show('menu')};
