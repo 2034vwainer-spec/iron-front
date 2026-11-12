@@ -140,15 +140,15 @@ function createRoomAttempt(attempt=0){
 }
 async function createOnlineRoom(){
   if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE.');return}
-  if(!turnConfigured&&!(await loadTurnRelay()))return;
-  closeOnline();show('online');onlineStatus('PREPARING PRIVATE ROOM...');
+  if(!turnConfigured)onlineStatus('TRYING DIRECT CONNECTION. IF IT FAILS, LOAD TURN RELAY BELOW.');
+  closeOnline();show('online');onlineStatus(turnConfigured?'PREPARING PRIVATE ROOM WITH TURN RELAY...':'TRYING DIRECT CONNECTION — TURN SETUP IS AVAILABLE BELOW.');
   $('roomCode').textContent='WAIT...';$('roomStatus').textContent='Waiting for online server confirmation...';
   $('roomCreated').classList.remove('hidden');
   createRoomAttempt();
 }
 async function joinOnlineRoom(){
   if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE.');return}
-  if(!turnConfigured&&!(await loadTurnRelay()))return;
+  if(!turnConfigured)onlineStatus('TRYING DIRECT CONNECTION. IF IT FAILS, LOAD TURN RELAY BELOW.');
   const code=$('joinCode').value.trim().toUpperCase();
   if(!/^[A-Z0-9]{8}$/.test(code)){onlineStatus('ENTER THE FULL 8-CHARACTER ROOM CODE.');return}
   closeOnline();show('online');$('roomCreated').classList.add('hidden');
