@@ -3,6 +3,44 @@
 
 const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext('2d');
 let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,keys={},enemies=[],enemyBolts=[],player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0,mouseHeld=false;
+const ambientMotes=Array.from({length:58},(_,i)=>({
+  x:(i*157.31+37)%900,
+  y:(i*89.73+21)%520,
+  speed:.0025+(i%7)*.00085,
+  size:.45+(i%4)*.38,
+  phase:i*1.71,
+  alpha:.025+(i%5)*.012
+}));
+function drawAtmosphere(now,horizon){
+  const isDesert=mode==='ADVANCE',isForest=mode==='SURVIVAL';
+  ctx.save();
+  const sunX=isForest?170:isDesert?700:620;
+  const glow=ctx.createRadialGradient(sunX,horizon-95,3,sunX,horizon-95,isDesert?250:210);
+  glow.addColorStop(0,isDesert?'rgba(255,222,161,.17)':isForest?'rgba(194,218,167,.10)':'rgba(210,220,205,.10)');
+  glow.addColorStop(.38,isDesert?'rgba(239,205,148,.055)':'rgba(190,207,187,.035)');
+  glow.addColorStop(1,'rgba(150,170,160,0)');
+  ctx.fillStyle=glow;ctx.fillRect(0,0,900,Math.min(520,horizon+150));
+  const distanceFog=ctx.createLinearGradient(0,horizon-22,0,horizon+100);
+  distanceFog.addColorStop(0,'rgba(208,214,195,.015)');
+  distanceFog.addColorStop(.42,isDesert?'rgba(226,206,165,.095)':'rgba(190,207,190,.065)');
+  distanceFog.addColorStop(1,'rgba(175,190,172,0)');
+  ctx.fillStyle=distanceFog;ctx.fillRect(0,horizon-22,900,122);
+  const moteColor=isDesert?[229,207,165]:isForest?[187,215,159]:[207,219,211];
+  for(const mote of ambientMotes){
+    const x=(mote.x+now*mote.speed)%920-10;
+    const y=mote.y+Math.sin(now*.00042+mote.phase)*5;
+    const depthFade=y<horizon?0.25:Math.min(1,.38+(y-horizon)/250);
+    const pulse=.72+.28*Math.sin(now*.001+mote.phase);
+    const alpha=mote.alpha*depthFade*pulse;
+    ctx.fillStyle='rgba('+moteColor[0]+','+moteColor[1]+','+moteColor[2]+','+alpha+')';
+    ctx.beginPath();ctx.arc(x,y,mote.size,0,Math.PI*2);ctx.fill();
+    if(isDesert&&mote.size>1.2){
+      ctx.globalAlpha=alpha*.4;ctx.fillRect(x-3,y,6,.6);ctx.globalAlpha=1;
+    }
+  }
+  ctx.restore();
+}
+
 let peer=null,peerConn=null,onlineRole='',onlineReady=false,remotePlayer=null,lastNetSend=0,roomCodeValue='',connectionTimer=null;
 const remoteStart={host:{x:21.5,y:11.5,a:Math.PI},guest:{x:2.5,y:11.5,a:0}};
 const peerConfig={debug:2,config:{iceServers:[
@@ -443,6 +481,8 @@ function render(){
   const haze=ctx.createLinearGradient(0,horizon-15,0,horizon+50);
   haze.addColorStop(0,currentTheme.haze);haze.addColorStop(1,'#59665300');
   ctx.fillStyle=haze;ctx.fillRect(0,horizon-15,900,70);
+  // Soft light bloom and distance haze make the map feel less flat.
+  drawAtmosphere(now,horizon);
   // A different skyline silhouette for each operation zone
   ctx.globalAlpha=.55;ctx.fillStyle=currentTheme.skyline;
   if(mode==='ADVANCE'){
@@ -706,6 +746,15 @@ function render(){
     const x=(i*137+53)%900,y=390+(i*47%125),r=1+(i%3);
     ctx.fillStyle=i%2?'#c0b99522':'#0b120e35';ctx.beginPath();ctx.ellipse(x,y,r*1.7,r*.7,(i%5)*.3,0,Math.PI*2);ctx.fill();
   }
+  // Fine surface grain catches the ambient light near the bottom of the frame.
+  ctx.save();
+  for(let i=0;i<44;i++){
+    const x=(i*211+19)%900,y=430+(i*37%85);
+    const shimmer=.025+.018*Math.sin(now*.0012+i*2.1);
+    ctx.fillStyle='rgba(220,214,190,'+shimmer+')';
+    ctx.fillRect(x,y,1+(i%3),1);
+  }
+  ctx.restore();
   // Subtle edge vignette for depth
   const vignette=ctx.createRadialGradient(450,260,170,450,260,560);
   vignette.addColorStop(0,'#00000000');vignette.addColorStop(1,'#050a08aa');
