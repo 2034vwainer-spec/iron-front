@@ -136,7 +136,7 @@ const themes={
   'BATTLE ROYALE':{label:'ABANDONED TOWN',sky:['#192838','#72818a','#c1b89f'],haze:'#d1c8b266',skyline:'#3b4648',road:[73,79,77],ground:[124,119,105],grass:[82,97,69],roadAxis:'cross'}
 };
 function configureMap(){
-  map=buildMap(mode);currentTheme=themes[mode]||themes.ATTACK;
+  map=buildMap(mode==='DUEL'?'ATTACK':mode);currentTheme=themes[mode]||themes.ATTACK;
   scenery=(sceneryByMode[mode]||sceneryByMode.ATTACK).filter(p=>!wall(p.x,p.y));
 }
 function free(x,y,r=.18){return !wall(x-r,y-r)&&!wall(x+r,y-r)&&!wall(x-r,y+r)&&!wall(x+r,y+r)}
@@ -145,6 +145,7 @@ function openShop(type){$('shopTitle').textContent=type==='WEAPON'?'WEAPON ARMOR
 $('weapons').onclick=()=>openShop('WEAPON');$('armor').onclick=()=>openShop('ARMOR');$('back').onclick=()=>show('menu');
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('selected',x===b));say('SELECTED OPERATION: '+mode)});
 function waveSize(wave=level){
+  if(mode==='DUEL')return 1;
   const base={ATTACK:5,ADVANCE:5,DEFENSE:6,SURVIVAL:8,'BATTLE ROYALE':12}[mode]||5;
   return Math.min(22,base+Math.floor((wave-1)*1.45));
 }
@@ -173,7 +174,7 @@ function beginNextWave(){
   if(waveBreakUntil||!playing)return;
   waveBreakUntil=performance.now()+4500;
   
-  say('WAVE '+level+' CLEARED — PREPARE FOR THE NEXT WAVE');
+  say(mode==='DUEL'?'ROUND '+level+' WON — NEXT OPPONENT INCOMING':'WAVE '+level+' CLEARED — PREPARE FOR THE NEXT WAVE');
   hud();
 }
 function advanceWave(now){
@@ -184,11 +185,11 @@ function advanceWave(now){
   spawn(count);
   // A small reserve refill rewards completing a wave without filling the magazine automatically.
   reserve+=Math.max(4,Math.ceil(gun().clip*.35));
-  say(level%3===0?'BOSS WAVE '+level+' — A HEAVY ENEMY HAS ARRIVED':'WAVE '+level+' — '+count+' HOSTILES INCOMING');
+  say(mode==='DUEL'?'ROUND '+level+' — ONE OPPONENT':'WAVE '+level+' — '+count+' HOSTILES INCOMING');
   hud();
 }
 function start(){level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(waveSize(1));launch()}
-function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=mode+' / '+currentTheme.label;last=performance.now();hud();say('MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
+function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=(mode==='DUEL'?'1V1 DUEL':mode)+' / '+currentTheme.label;last=performance.now();hud();say(mode==='DUEL'?'1V1 DUEL — DEFEAT THE OPPONENT':'MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
 $('play').onclick=start;$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
 $('quit').onclick=()=>{playing=false;show('menu');say('MISSION ENDED')};
 $('retryGame').onclick=()=>start();$('gameOverMenu').onclick=()=>{playing=false;paused=false;show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
