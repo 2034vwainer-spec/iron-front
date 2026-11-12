@@ -248,7 +248,7 @@ function advanceWave(now){
 }
 function start(){level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(waveSize(1));launch()}
 function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=(mode==='DUEL'?'1V1 DUEL':mode)+' / '+currentTheme.label;last=performance.now();hud();say(mode==='DUEL'?'1V1 DUEL — DEFEAT THE OPPONENT':'MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
-$('play').onclick=start;$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
+$('play').onclick=()=>{if(mode==='DUEL'){show('online');onlineStatus('CREATE A ROOM OR JOIN WITH A CODE')}else start()};$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
 $('quit').onclick=()=>{playing=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED')};
 $('retryGame').onclick=()=>{if(mode==='DUEL'){onlineStatus('CREATE A NEW ROOM TO PLAY AGAIN');closeOnline();show('online')}else start()};$('gameOverMenu').onclick=()=>{playing=false;paused=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
