@@ -257,7 +257,7 @@ canvas {
   border: 1px solid #718078;
   border-radius: 6px;
   box-shadow: inset 0 0 0 1px #0b120e, 0 12px 28px #0008, 0 0 26px #a7b89a12;
-  filter: contrast(1.045) saturate(.94);
+  image-rendering: auto;
   cursor: crosshair;
   touch-action: none;
 }
