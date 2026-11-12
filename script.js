@@ -2,6 +2,17 @@
 // Manual aim only. The Machine Gun repeats shots only while the player holds the trigger.
 
 const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext('2d');
+const LOGICAL_WIDTH=900,LOGICAL_HEIGHT=520;
+function setupCanvasResolution(){
+  const pixelRatio=Math.min(2.5,Math.max(1,window.devicePixelRatio||1));
+  canvas.width=Math.round(LOGICAL_WIDTH*pixelRatio);
+  canvas.height=Math.round(LOGICAL_HEIGHT*pixelRatio);
+  ctx.setTransform(pixelRatio,0,0,pixelRatio,0,0);
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+}
+setupCanvasResolution();
+window.addEventListener('resize',setupCanvasResolution,{passive:true});
 let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,keys={},enemies=[],enemyBolts=[],player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0,mouseHeld=false;
 const ambientMotes=Array.from({length:58},(_,i)=>({
   x:(i*157.31+37)%900,
@@ -419,7 +430,7 @@ function finishReload(now){
 $('reload').onclick=reload;
 
 window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='r')reload();if(e.key==='Escape'&&playing)$('pause').click()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-let lastMouseX=null;canvas.addEventListener('pointermove',e=>{let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*canvas.width/r.width;if(lastMouseX!==null)player.a+=(x-lastMouseX)/canvas.width*2.1;lastMouseX=x});canvas.addEventListener('pointerleave',()=>lastMouseX=null);
+let lastMouseX=null;canvas.addEventListener('pointermove',e=>{let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*LOGICAL_WIDTH/r.width;if(lastMouseX!==null)player.a+=(x-lastMouseX)/LOGICAL_WIDTH*2.1;lastMouseX=x});canvas.addEventListener('pointerleave',()=>lastMouseX=null);
 canvas.addEventListener('pointerdown',e=>{if(e.button===0||e.button===2){e.preventDefault();canvas.setPointerCapture(e.pointerId);mouseHeld=true;fire()}});
 window.addEventListener('pointerup',()=>mouseHeld=false);
 window.addEventListener('pointercancel',()=>mouseHeld=false);
@@ -505,9 +516,9 @@ function render(){
   }
   ctx.globalAlpha=1;
   // Perspective ground is sampled from the compound's actual roads and yards
-  for(let y=Math.ceil(horizon+3);y<520;y+=6){
+  for(let y=Math.ceil(horizon+3);y<520;y+=4){
     const dist=Math.min(22,390*.58/(y-horizon));
-    for(let x=0;x<900;x+=10){
+    for(let x=0;x<900;x+=5){
       const angle=player.a+(x/900-.5)*1.25,wx=player.x+Math.cos(angle)*dist,wy=player.y+Math.sin(angle)*dist;
       const road=currentTheme.roadAxis==='none'?false:currentTheme.roadAxis==='horizontal'?Math.abs(wy-11.5)<1.35:(Math.abs(wy-11.5)<1.2||Math.abs(wx-11.5)<1.2);
       const grass=((Math.floor(wx*1.7)+Math.floor(wy*1.3)*3)%13===0)&&!road;
@@ -520,17 +531,17 @@ function render(){
       const r=Math.max(0,Math.min(255,(base[0]+grit)*shade*variation));
       const g=Math.max(0,Math.min(255,(base[1]+grit)*shade*variation));
       const b=Math.max(0,Math.min(255,(base[2]+grit)*shade*variation));
-      ctx.fillStyle='rgb('+Math.floor(r)+','+Math.floor(g)+','+Math.floor(b)+')';ctx.fillRect(x,y,10,6);
+      ctx.fillStyle='rgb('+Math.floor(r)+','+Math.floor(g)+','+Math.floor(b)+')';ctx.fillRect(x,y,5,4);
       // Broken yellow road markings at the broad crossroad
       const laneCenter=currentTheme.roadAxis==='none'?99:currentTheme.roadAxis==='horizontal'?Math.abs(wy-11.5):Math.min(Math.abs(wy-11.5),Math.abs(wx-11.5));
       if(road&&laneCenter<.045&&Math.abs((wx%3)-1.5)<.65&&dist<13){
-        ctx.fillStyle=mode==='ADVANCE'?'#d4bc82':'#d8c77d';ctx.globalAlpha=Math.max(.15,.65-dist*.035);ctx.fillRect(x,y,10,3);ctx.globalAlpha=1;
+        ctx.fillStyle=mode==='ADVANCE'?'#d4bc82':'#d8c77d';ctx.globalAlpha=Math.max(.15,.65-dist*.035);ctx.fillRect(x,y,5,3);ctx.globalAlpha=1;
       }
     }
   }
   // Ray-cast walls with material-specific surface details
   const depth=new Float32Array(900);
-  for(let x=0;x<900;x+=3){
+  for(let x=0;x<900;x+=1){
     const ray=player.a+(x/900-.5)*1.25,hit=rayInfo(ray),corrected=Math.max(.08,hit.d);
     const h=Math.min(520,390/corrected),top=horizon-h/2,light=Math.max(24,172-corrected*12);
     const palette=hit.material==='2'?[105,119,119]:hit.material==='3'?[133,119,91]:[119,132,112];
@@ -556,7 +567,7 @@ function render(){
     }
     if(hit.u<.035||hit.u>.965){ctx.fillStyle='#101913';ctx.globalAlpha=.32;ctx.fillRect(x,top,2,h);ctx.globalAlpha=1}
     if(corrected<7){ctx.fillStyle='#e0dfbd';ctx.globalAlpha=.10;ctx.fillRect(x,top,1,h);ctx.globalAlpha=1}
-    depth[x]=depth[x+1]=depth[x+2]=corrected;
+    depth[x]=corrected;
   }
   // World props: crates, barrels, street lamps, shrubs and road barriers
   [...scenery].sort((a,b)=>Math.hypot(b.x-player.x,b.y-player.y)-Math.hypot(a.x-player.x,a.y-player.y)).forEach(p=>{
