@@ -38,10 +38,20 @@
 
   <div class="actions">
     <button id="play" class="primary">DEPLOY →</button>
+    <button id="onlinePlay">1V1 ONLINE</button>
     <button id="weapons">WEAPON ARMORY</button>
     <button id="armor">ARMOR SHOP</button>
   </div>
   <p class="footnote">WASD move · Mouse aim · Click to fire · R reload · Shift sprint</p>
+</section>
+
+<section id="online" class="panel hidden">
+  <div class="section-head"><div><p class="eyebrow">ONLINE MULTIPLAYER</p><h2>1V1 PRIVATE MATCH</h2></div><button id="onlineBack">← BACK</button></div>
+  <p class="muted">Create a room and share its code, or enter your friend's code to join.</p>
+  <div class="actions"><button id="createRoom" class="primary">CREATE ROOM</button></div>
+  <div id="roomCreated" class="hidden"><p class="eyebrow">YOUR ROOM CODE</p><h2 id="roomCode" class="room-code">------</h2><p id="roomStatus" class="muted">Waiting for the other player...</p></div>
+  <div class="join-row"><input id="joinCode" maxlength="6" placeholder="ENTER 6-CHARACTER CODE" autocomplete="off"><button id="joinRoom">JOIN ROOM</button></div>
+  <p id="onlineStatus" class="online-status" aria-live="polite">ONLINE SYSTEM READY</p>
 </section>
 
 <section id="shop" class="panel hidden">
@@ -166,6 +176,7 @@
 
 <div id="message" role="status">SYSTEM READY — SELECT YOUR OPERATION</div>
 </main>
-<script src="script.js?v=online-duel-20261112"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="script.js?v=online-duel-20261112b"></script>
 </body>
 </html>
