@@ -190,8 +190,8 @@ function advanceWave(now){
 function start(){level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(waveSize(1));launch()}
 function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=mode+' / '+currentTheme.label;last=performance.now();hud();say('MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
 $('play').onclick=start;$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
-$('quit').onclick=()=>{playing=false;mouseDown=false;show('menu');say('MISSION ENDED')};
-$('retryGame').onclick=()=>start();$('gameOverMenu').onclick=()=>{playing=false;paused=false;mouseDown=false;show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
+$('quit').onclick=()=>{playing=false;show('menu');say('MISSION ENDED')};
+$('retryGame').onclick=()=>start();$('gameOverMenu').onclick=()=>{playing=false;paused=false;show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
 function reload(){
   const now=performance.now();
@@ -208,15 +208,17 @@ $('reload').onclick=reload;
 
 window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='r')reload();if(e.key==='Escape'&&playing)$('pause').click()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 let lastMouseX=null;canvas.addEventListener('pointermove',e=>{let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*canvas.width/r.width;if(lastMouseX!==null)player.a+=(x-lastMouseX)/canvas.width*2.1;lastMouseX=x});canvas.addEventListener('pointerleave',()=>lastMouseX=null);
-canvas.addEventListener('pointerdown',e=>{if(e.button===0||e.button===2){e.preventDefault();mouseDown=true;canvas.setPointerCapture(e.pointerId);fire()}});window.addEventListener('pointerup',()=>mouseDown=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{if(e.button===0||e.button===2){e.preventDefault();canvas.setPointerCapture(e.pointerId);fire()}});canvas.addEventListener('contextmenu',e=>e.preventDefault());
 function angleDiff(a,b){return Math.atan2(Math.sin(a-b),Math.cos(a-b))}
 function fire(){
   const now=performance.now();
   if(!playing||paused||reloadUntil>now||now-lastShot<gun().rate)return;
-  let target=null,best=.14;
+  let target=null,best=Infinity;
+  // Manual shot only: the crosshair direction must intersect the enemy's small on-screen hit area.
   enemies.forEach(e=>{
     const d=Math.hypot(e.x-player.x,e.y-player.y),a=Math.atan2(e.y-player.y,e.x-player.x),diff=Math.abs(angleDiff(a,player.a));
-    if(d<14&&diff<best&&!blocked(player.x,player.y,e.x,e.y)){best=diff;target=e}
+    const hitAngle=Math.atan2(.20,d);
+    if(d<14&&diff<=hitAngle&&diff<best&&!blocked(player.x,player.y,e.x,e.y)){best=diff;target=e}
   });
   if(ammo<=0){
     if(now-emptyMessageAt>1200){say('MAGAZINE EMPTY — PRESS R TO RELOAD');emptyMessageAt=now}
@@ -532,6 +534,6 @@ function finishGameOver(reason){
   say('GAME OVER');
 }
 function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}if(d<11&&d>.9&&performance.now()>=e.nextShot&&!blocked(e.x,e.y,player.x,player.y)){const a=Math.atan2(player.y-e.y,player.x-e.x);enemyBolts.push({x:e.x,y:e.y,vx:Math.cos(a)*5.2,vy:Math.sin(a)*5.2,life:2.5});e.nextShot=performance.now()+(e.boss?1250:2050)+Math.random()*650}});enemyBolts=enemyBolts.filter(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(wall(b.x,b.y)||b.life<=0)return false;if(Math.hypot(b.x-player.x,b.y-player.y)<.25){const damage=Math.max(2,8*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage;return false}return true});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
-function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);if(mouseDown)fire();render();hud();requestAnimationFrame(loop)}
+function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);render();hud();requestAnimationFrame(loop)}
 hud();
 })();
