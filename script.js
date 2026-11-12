@@ -135,7 +135,7 @@ let currentTheme={label:'INDUSTRIAL YARD',sky:['#142533','#506d78','#a9b5a7'],ha
 let scenery=[];
 const spawnPoints={'ATTACK':{x:2.5,y:11.5,a:0},'ADVANCE':{x:2.5,y:11.5,a:0},'DEFENSE':{x:12.5,y:11.5,a:0},'SURVIVAL':{x:2.5,y:11.5,a:0},'BATTLE ROYALE':{x:11.5,y:21.5,a:-Math.PI/2}};
 const gun=()=>guns.find(g=>g.name===weapon);
-function show(id){['menu','shop','game','bus','gameover'].forEach(x=>$(x).classList.toggle('hidden',x!==id));if(id==='gameover'){$('gameover').classList.remove('hidden');$('gameover').scrollIntoView({block:'center',behavior:'instant'})}}
+function show(id){['menu','online','shop','game','bus','gameover'].forEach(x=>$(x).classList.toggle('hidden',x!==id));if(id==='gameover'){$('gameover').classList.remove('hidden');$('gameover').scrollIntoView({block:'center',behavior:'instant'})}}
 function say(s){$('message').textContent=s}
 function hud(){
   $('coins').textContent=coins;$('gameCoins').textContent=coins;$('level').textContent=level;
