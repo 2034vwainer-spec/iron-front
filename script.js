@@ -1,6 +1,6 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext('2d');
-let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,mouseDown=false,keys={},enemies=[],player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0;
+let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,mouseDown=false,keys={},enemies=[],enemyBolts=[],autoAim=true,autoFire=true,player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0;
 const guns=[{name:'PISTOL',cost:0,damage:25,clip:12,rate:330},{name:'AK-47',cost:650,damage:22,clip:30,rate:125},{name:'DESERT EAGLE',cost:900,damage:60,clip:7,rate:470},{name:'MACHINE GUN',cost:1600,damage:18,clip:100,rate:65}];
 const vests=[{name:'LIGHT VEST',cost:300,protection:15},{name:'REINFORCED VEST',cost:700,protection:30},{name:'HEAVY ARMOR',cost:1200,protection:50}];
 let owned=['PISTOL'];
@@ -164,7 +164,7 @@ function spawn(n){
   }
   chosen.forEach((p,i)=>{
     const boss=level>1&&level%3===0&&i===0,hpValue=boss?260+level*38:55+level*12;
-    enemies.push({x:p.x,y:p.y,hp:hpValue,max:hpValue,boss,speed:boss?.48:Math.min(1.25,.65+level*.025),hit:0});
+    enemies.push({x:p.x,y:p.y,hp:hpValue,max:hpValue,boss,speed:boss?.48:Math.min(1.25,.65+level*.025),hit:0,nextShot:performance.now()+900+Math.random()*1100});
   });
 }
 function beginNextWave(){
@@ -208,13 +208,14 @@ window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.to
 let lastMouseX=null;canvas.addEventListener('pointermove',e=>{let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*canvas.width/r.width;if(lastMouseX!==null)player.a+=(x-lastMouseX)/canvas.width*2.1;lastMouseX=x});canvas.addEventListener('pointerleave',()=>lastMouseX=null);
 canvas.addEventListener('pointerdown',e=>{if(e.button===0||e.button===2){e.preventDefault();mouseDown=true;canvas.setPointerCapture(e.pointerId);fire()}});window.addEventListener('pointerup',()=>mouseDown=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 function angleDiff(a,b){return Math.atan2(Math.sin(a-b),Math.cos(a-b))}
+function nearestVisibleEnemy(){let best=null,bestD=16;for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<bestD&&!blocked(player.x,player.y,e.x,e.y)){best=e;bestD=d}}return best}
 function fire(){
   const now=performance.now();
   if(!playing||paused||reloadUntil>now||now-lastShot<gun().rate)return;
-  let target=null,best=.14;
+  let target=null,best=autoAim?16:.14;
   enemies.forEach(e=>{
     const d=Math.hypot(e.x-player.x,e.y-player.y),a=Math.atan2(e.y-player.y,e.x-player.x),diff=Math.abs(angleDiff(a,player.a));
-    if(d<14&&diff<best&&!blocked(player.x,player.y,e.x,e.y)){best=diff;target=e}
+    if(d<(autoAim?16:14)&&diff<best&&!blocked(player.x,player.y,e.x,e.y)){best=autoAim?d:diff;target=e}
   });
   if(ammo<=0){
     if(now-emptyMessageAt>1200){say('MAGAZINE EMPTY — PRESS R TO RELOAD');emptyMessageAt=now}
@@ -444,6 +445,8 @@ function render(){
     if(e.boss){ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.fillText('BOSS',sx-17,y-20)}
     
   });
+  // Enemy energy bolts are harmless-looking arcade projectiles, not realistic weapon effects.
+  enemyBolts.forEach(b=>{const dx=b.x-player.x,dy=b.y-player.y,d=Math.hypot(dx,dy);let a=Math.atan2(dy,dx)-player.a;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)>.66||d<.1)return;const sx=450+a/1.25*900;if(sx<0||sx>=900||d>depth[Math.floor(sx)]||blocked(player.x,player.y,b.x,b.y))return;const size=Math.max(3,18/d);ctx.save();ctx.shadowBlur=18;ctx.shadowColor='#ffb34d';ctx.fillStyle='#ffd36b';ctx.beginPath();ctx.arc(sx,horizon+Math.min(210,150/d),size,0,Math.PI*2);ctx.fill();ctx.restore()});
   // Shot tracer and hit marker flash
   if(shotFx&&now<shotFx.until&&shotFx.target){
     const dx=shotFx.target.x-player.x,dy=shotFx.target.y-player.y;
@@ -495,7 +498,7 @@ function finishGameOver(reason){
   $('gameover').style.display='flex';
   say('GAME OVER');
 }
-function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
+function update(dt){const aimTarget=autoAim?nearestVisibleEnemy():null;if(aimTarget){const desired=Math.atan2(aimTarget.y-player.y,aimTarget.x-player.x),turn=angleDiff(desired,player.a);player.a+=Math.sign(turn)*Math.min(Math.abs(turn),5.5*dt)}let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft&&!autoAim)player.a-=2*dt;if(keys.arrowright&&!autoAim)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}if(d<11&&d>.9&&performance.now()>=e.nextShot&&!blocked(e.x,e.y,player.x,player.y)){const a=Math.atan2(player.y-e.y,player.x-e.x);enemyBolts.push({x:e.x,y:e.y,vx:Math.cos(a)*5.2,vy:Math.sin(a)*5.2,life:2.5});e.nextShot=performance.now()+(e.boss?1250:2050)+Math.random()*650}});enemyBolts=enemyBolts.filter(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(wall(b.x,b.y)||b.life<=0)return false;if(Math.hypot(b.x-player.x,b.y-player.y)<.25){const damage=Math.max(2,8*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage;return false}return true});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
 function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);if(mouseDown)fire();render();hud();requestAnimationFrame(loop)}
 hud();
 })();
