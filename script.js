@@ -3,6 +3,64 @@
 
 const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext('2d');
 let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,keys={},enemies=[],enemyBolts=[],player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0;
+let peer=null,peerConn=null,onlineRole='',onlineReady=false,remotePlayer=null,lastNetSend=0,roomCodeValue='';
+const remoteStart={host:{x:21.5,y:11.5,a:Math.PI},guest:{x:2.5,y:11.5,a:0}};
+function onlineStatus(message){$('onlineStatus').textContent=message}
+function sendNet(data){if(peerConn&&peerConn.open)peerConn.send(data)}
+function closeOnline(){
+  onlineReady=false;remotePlayer=null;peerConn=null;
+  if(peer){try{peer.destroy()}catch(e){}peer=null}
+  roomCodeValue='';onlineRole='';
+}
+function enterOnlineGame(role){
+  onlineRole=role;onlineReady=true;mode='DUEL';level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;
+  configureMap();player={...remoteStart[role]};ammo=gun().clip;reserve=gun().clip*3;
+  enemies=[];enemyBolts=[];remotePlayer={...remoteStart[role==='host'?'guest':'host'],hp:100,a:role==='host'?Math.PI:0};
+  launch();
+  say('ONLINE 1V1 CONNECTED — FIGHT!');
+}
+function setupConnection(conn,role){
+  peerConn=conn;
+  conn.on('open',()=>{onlineStatus('PLAYER CONNECTED — STARTING MATCH');$('roomStatus').textContent='Opponent connected!';enterOnlineGame(role);sendNet({type:'hello',role});});
+  conn.on('data',data=>{
+    if(!data||typeof data!=='object')return;
+    if(data.type==='state'){
+      if(!remotePlayer)remotePlayer={x:data.x,y:data.y,a:data.a,hp:data.hp};
+      else {remotePlayer.x=data.x;remotePlayer.y=data.y;remotePlayer.a=data.a;remotePlayer.hp=data.hp}
+    }else if(data.type==='hit'){
+      hp=Math.max(0,hp-(Number(data.damage)||0));hud();
+      if(hp<=0)finishGameOver('DEFEATED IN ONLINE DUEL');
+    }else if(data.type==='leave'){
+      onlineStatus('OPPONENT LEFT THE MATCH');say('OPPONENT DISCONNECTED');
+    }
+  });
+  conn.on('close',()=>{onlineReady=false;onlineStatus('CONNECTION LOST — RETURN TO MENU');say('ONLINE CONNECTION LOST')});
+  conn.on('error',()=>onlineStatus('CONNECTION ERROR — TRY AGAIN'));
+}
+function createOnlineRoom(){
+  if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE');return}
+  closeOnline();show('online');onlineStatus('CREATING PRIVATE ROOM...');
+  const code=Math.random().toString(36).slice(2,8).toUpperCase();
+  roomCodeValue=code;$('roomCode').textContent=code;$('roomCreated').classList.remove('hidden');
+  peer=new Peer('ironfront-'+code.toLowerCase());
+  peer.on('open',()=>onlineStatus('ROOM READY — SEND THE CODE TO YOUR FRIEND'));
+  peer.on('connection',conn=>{if(peerConn){conn.close();return}setupConnection(conn,'host')});
+  peer.on('error',err=>{onlineStatus(err.type==='unavailable-id'?'CODE COLLISION — CREATE A NEW ROOM':'ROOM ERROR — TRY AGAIN');});
+}
+function joinOnlineRoom(){
+  if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE');return}
+  const code=$('joinCode').value.trim().toUpperCase();
+  if(!/^[A-Z0-9]{6}$/.test(code)){onlineStatus('ENTER A VALID 6-CHARACTER ROOM CODE');return}
+  closeOnline();show('online');onlineStatus('CONNECTING TO ROOM '+code+'...');
+  peer=new Peer();
+  peer.on('open',()=>{const conn=peer.connect('ironfront-'+code.toLowerCase(),{reliable:true});setupConnection(conn,'guest')});
+  peer.on('error',()=>onlineStatus('COULD NOT CONNECT — CHECK THE CODE AND TRY AGAIN'));
+}
+$('onlinePlay').onclick=()=>{show('online');onlineStatus('CREATE A ROOM OR JOIN WITH A CODE')};
+$('onlineBack').onclick=()=>{closeOnline();show('menu')};
+$('createRoom').onclick=createOnlineRoom;
+$('joinRoom').onclick=joinOnlineRoom;
+
 const guns=[{name:'PISTOL',cost:0,damage:25,clip:12,rate:330},{name:'AK-47',cost:650,damage:22,clip:30,rate:125},{name:'DESERT EAGLE',cost:900,damage:60,clip:7,rate:470},{name:'MACHINE GUN',cost:1600,damage:18,clip:100,rate:65}];
 const vests=[{name:'LIGHT VEST',cost:300,protection:15},{name:'REINFORCED VEST',cost:700,protection:30},{name:'HEAVY ARMOR',cost:1200,protection:50}];
 let owned=['PISTOL'];
@@ -145,7 +203,7 @@ function openShop(type){$('shopTitle').textContent=type==='WEAPON'?'WEAPON ARMOR
 $('weapons').onclick=()=>openShop('WEAPON');$('armor').onclick=()=>openShop('ARMOR');$('back').onclick=()=>show('menu');
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('selected',x===b));say('SELECTED OPERATION: '+mode)});
 function waveSize(wave=level){
-  if(mode==='DUEL')return 1;
+  if(mode==='DUEL')return 0;
   const base={ATTACK:5,ADVANCE:5,DEFENSE:6,SURVIVAL:8,'BATTLE ROYALE':12}[mode]||5;
   return Math.min(22,base+Math.floor((wave-1)*1.45));
 }
@@ -191,8 +249,8 @@ function advanceWave(now){
 function start(){level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(waveSize(1));launch()}
 function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=(mode==='DUEL'?'1V1 DUEL':mode)+' / '+currentTheme.label;last=performance.now();hud();say(mode==='DUEL'?'1V1 DUEL — DEFEAT THE OPPONENT':'MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
 $('play').onclick=start;$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
-$('quit').onclick=()=>{playing=false;show('menu');say('MISSION ENDED')};
-$('retryGame').onclick=()=>start();$('gameOverMenu').onclick=()=>{playing=false;paused=false;show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
+$('quit').onclick=()=>{playing=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED')};
+$('retryGame').onclick=()=>{if(mode==='DUEL'){onlineStatus('CREATE A NEW ROOM TO PLAY AGAIN');closeOnline();show('online')}else start()};$('gameOverMenu').onclick=()=>{playing=false;paused=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
 function reload(){
   const now=performance.now();
@@ -227,7 +285,11 @@ function fire(){
   }
   lastShot=now;ammo--;muzzleFlashUntil=now+95;cameraKick=Math.min(.28,cameraKick+.16);
   shotFx={until:now+115,target:target?{x:target.x,y:target.y}:null};
-  if(target){
+  if(mode==='DUEL'&&onlineReady&&remotePlayer){
+    const d=Math.hypot(remotePlayer.x-player.x,remotePlayer.y-player.y),a=Math.atan2(remotePlayer.y-player.y,remotePlayer.x-player.x),diff=Math.abs(angleDiff(a,player.a));
+    if(d<14&&diff<=Math.atan2(.20,d)&&!blocked(player.x,player.y,remotePlayer.x,remotePlayer.y)){sendNet({type:'hit',damage:gun().damage});say('HIT — '+gun().damage+' DAMAGE');}
+    else say('SHOT FIRED — NO TARGET HIT');
+  }else if(target){
     target.hp-=gun().damage;say('HIT — '+gun().damage+' DAMAGE');
     if(target.hp<=0){
       coins+=target.boss?500:100;enemies=enemies.filter(e=>e!==target);
@@ -481,6 +543,26 @@ function render(){
     if(e.boss){ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.fillText('BOSS',sx-17,y-20)}
     
   });
+  // Render the connected human opponent as a distinct field character.
+  if(mode==='DUEL'&&onlineReady&&remotePlayer){
+    const dx=remotePlayer.x-player.x,dy=remotePlayer.y-player.y,d=Math.hypot(dx,dy);
+    let a=Math.atan2(dy,dx)-player.a;a=Math.atan2(Math.sin(a),Math.cos(a));
+    if(Math.abs(a)<.66&&d>.2){
+      const sx=450+a/1.25*900;
+      if(sx>=0&&sx<900&&d<depth[Math.floor(sx)]&&!blocked(player.x,player.y,remotePlayer.x,remotePlayer.y)){
+        const size=Math.min(210,350/d),y=horizon-size*.56,w=size*.46;
+        ctx.fillStyle='#07100d99';ctx.beginPath();ctx.ellipse(sx,y+size*.94,w*.7,size*.08,0,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#233e66';ctx.fillRect(sx-w*.34,y+size*.39,w*.68,size*.39);
+        ctx.fillStyle='#9b8d72';ctx.beginPath();ctx.arc(sx,y+size*.25,size*.105,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#27313c';ctx.beginPath();ctx.arc(sx,y+size*.21,size*.15,Math.PI,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#18232d';ctx.fillRect(sx-w*.28,y+size*.76,w*.22,size*.2);ctx.fillRect(sx+w*.06,y+size*.76,w*.22,size*.2);
+        ctx.fillStyle='#8de4d4';ctx.fillRect(sx+w*.15,y+size*.54,w*.42,Math.max(3,size*.045));
+        ctx.fillStyle='#08100e';ctx.fillRect(sx-size*.31,y-13,size*.62,7);
+        ctx.fillStyle='#62c7a2';ctx.fillRect(sx-size*.30,y-12,size*.60*Math.max(0,remotePlayer.hp/100),5);
+        ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.fillText('PLAYER 2',sx-28,y-20);
+      }
+    }
+  }
   // Enemy energy bolts are harmless-looking arcade projectiles, not realistic weapon effects.
   enemyBolts.forEach(b=>{const dx=b.x-player.x,dy=b.y-player.y,d=Math.hypot(dx,dy);let a=Math.atan2(dy,dx)-player.a;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)>.66||d<.1)return;const sx=450+a/1.25*900;if(sx<0||sx>=900||d>depth[Math.floor(sx)]||blocked(player.x,player.y,b.x,b.y))return;const size=Math.max(3,18/d);ctx.save();ctx.shadowBlur=18;ctx.shadowColor='#ffb34d';ctx.fillStyle='#ffd36b';ctx.beginPath();ctx.arc(sx,horizon+Math.min(210,150/d),size,0,Math.PI*2);ctx.fill();ctx.restore()});
   // Shot tracer and hit marker flash
@@ -535,6 +617,6 @@ function finishGameOver(reason){
   say('GAME OVER');
 }
 function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}if(d<11&&d>.9&&performance.now()>=e.nextShot&&!blocked(e.x,e.y,player.x,player.y)){const a=Math.atan2(player.y-e.y,player.x-e.x);enemyBolts.push({x:e.x,y:e.y,vx:Math.cos(a)*5.2,vy:Math.sin(a)*5.2,life:2.5});e.nextShot=performance.now()+(e.boss?1250:2050)+Math.random()*650}});enemyBolts=enemyBolts.filter(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(wall(b.x,b.y)||b.life<=0)return false;if(Math.hypot(b.x-player.x,b.y-player.y)<.25){const damage=Math.max(2,8*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage;return false}return true});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
-function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);render();hud();requestAnimationFrame(loop)}
+function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);if(mode==='DUEL'&&onlineReady&&now-lastNetSend>50){sendNet({type:'state',x:player.x,y:player.y,a:player.a,hp});lastNetSend=now}advanceWave(now);render();hud();requestAnimationFrame(loop)}
 hud();
 })();
