@@ -1,6 +1,6 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext('2d');
-let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,mouseDown=false,keys={},enemies=[],lockedTarget=null,player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0;
+let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,mouseDown=false,keys={},enemies=[],player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0;
 const guns=[{name:'PISTOL',cost:0,damage:25,clip:12,rate:330},{name:'AK-47',cost:650,damage:22,clip:30,rate:125},{name:'DESERT EAGLE',cost:900,damage:60,clip:7,rate:470},{name:'MACHINE GUN',cost:1600,damage:18,clip:100,rate:65}];
 const vests=[{name:'LIGHT VEST',cost:300,protection:15},{name:'REINFORCED VEST',cost:700,protection:30},{name:'HEAVY ARMOR',cost:1200,protection:50}];
 let owned=['PISTOL'];
@@ -147,7 +147,7 @@ function waveSize(wave=level){
   return Math.min(22,base+Math.floor((wave-1)*1.45));
 }
 function spawn(n){
-  enemies=[];lockedTarget=null;
+  enemies=[];
   const spots=[];
   for(let y=1;y<map.length-1;y++)for(let x=1;x<map[0].length-1;x++){
     const sx=x+.5,sy=y+.5,d=Math.hypot(sx-player.x,sy-player.y);
@@ -170,7 +170,7 @@ function spawn(n){
 function beginNextWave(){
   if(waveBreakUntil||!playing)return;
   waveBreakUntil=performance.now()+4500;
-  lockedTarget=null;
+  
   say('WAVE '+level+' CLEARED — PREPARE FOR THE NEXT WAVE');
   hud();
 }
@@ -203,32 +203,19 @@ function finishReload(now){
   }
 }
 $('reload').onclick=reload;
-$('autoAim').addEventListener('change',()=>{if(!$('autoAim').checked){lockedTarget=null;$('autoFire').checked=false;say('AUTO AIM OFF — AUTO FIRE DISABLED')}else say('AUTO AIM ON — TARGET LOCK ACTIVE')});$('autoFire').addEventListener('change',()=>say($('autoFire').checked?'AUTO FIRE ON — SHOOTING WHEN TARGET IS LOCKED':'AUTO FIRE OFF — MANUAL SHOOTING'));
+
 window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='r')reload();if(e.key==='Escape'&&playing)$('pause').click()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 let lastMouseX=null;canvas.addEventListener('pointermove',e=>{let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*canvas.width/r.width;if(lastMouseX!==null)player.a+=(x-lastMouseX)/canvas.width*2.1;lastMouseX=x});canvas.addEventListener('pointerleave',()=>lastMouseX=null);
 canvas.addEventListener('pointerdown',e=>{if(e.button===0||e.button===2){e.preventDefault();mouseDown=true;canvas.setPointerCapture(e.pointerId);fire()}});window.addEventListener('pointerup',()=>mouseDown=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 function angleDiff(a,b){return Math.atan2(Math.sin(a-b),Math.cos(a-b))}
-function canLock(e){return enemies.includes(e)&&Math.hypot(e.x-player.x,e.y-player.y)<14&&!blocked(player.x,player.y,e.x,e.y)}
-function findAutoTarget(){
-  if(lockedTarget&&canLock(lockedTarget))return lockedTarget;
-  const candidates=enemies.map(e=>({e,d:Math.hypot(e.x-player.x,e.y-player.y),a:Math.atan2(e.y-player.y,e.x-player.x)})).filter(o=>o.d<14&&!blocked(player.x,player.y,o.e.x,o.e.y));
-  candidates.sort((a,b)=>(a.d+Math.abs(angleDiff(a.a,player.a))*1.4)-(b.d+Math.abs(angleDiff(b.a,player.a))*1.4));
-  return candidates[0]?.e||null;
-}
-function fire(automatic=false){
+function fire(){
   const now=performance.now();
   if(!playing||paused||reloadUntil>now||now-lastShot<gun().rate)return;
-  if(automatic&&(!$('autoAim').checked||!$('autoFire').checked||!lockedTarget))return;
-  let target=null;
-  if($('autoAim').checked){lockedTarget=findAutoTarget();target=lockedTarget}
-  else{
-    let best=.14;
-    enemies.forEach(e=>{
-      const d=Math.hypot(e.x-player.x,e.y-player.y),a=Math.atan2(e.y-player.y,e.x-player.x),diff=Math.abs(angleDiff(a,player.a));
-      if(d<14&&diff<best&&!blocked(player.x,player.y,e.x,e.y)){best=diff;target=e}
-    });
-  }
-  if(automatic&&!target)return;
+  let target=null,best=.14;
+  enemies.forEach(e=>{
+    const d=Math.hypot(e.x-player.x,e.y-player.y),a=Math.atan2(e.y-player.y,e.x-player.x),diff=Math.abs(angleDiff(a,player.a));
+    if(d<14&&diff<best&&!blocked(player.x,player.y,e.x,e.y)){best=diff;target=e}
+  });
   if(ammo<=0){
     if(now-emptyMessageAt>1200){say('MAGAZINE EMPTY — PRESS R TO RELOAD');emptyMessageAt=now}
     return;
@@ -236,13 +223,13 @@ function fire(automatic=false){
   lastShot=now;ammo--;muzzleFlashUntil=now+95;cameraKick=Math.min(.28,cameraKick+.16);
   shotFx={until:now+115,target:target?{x:target.x,y:target.y}:null};
   if(target){
-    target.hp-=gun().damage;say((automatic?'AUTO FIRE':'HIT')+' — '+gun().damage+' DAMAGE');
+    target.hp-=gun().damage;say('HIT — '+gun().damage+' DAMAGE');
     if(target.hp<=0){
-      coins+=target.boss?500:100;enemies=enemies.filter(e=>e!==target);if(lockedTarget===target)lockedTarget=null;
+      coins+=target.boss?500:100;enemies=enemies.filter(e=>e!==target);
       say(target.boss?'BOSS DEFEATED +500 CREDITS':'ENEMY DEFEATED +100 CREDITS');
       if(!enemies.length){hp=Math.min(100,hp+15);beginNextWave()}
     }
-  }else if(!automatic){say('SHOT FIRED — NO TARGET HIT')}
+  }else{say('SHOT FIRED — NO TARGET HIT')}
   hud();
 }
 function rayInfo(a){
@@ -448,7 +435,7 @@ function render(){
     ctx.fillStyle='#080d0b';ctx.fillRect(sx-size*.31,y-13,size*.62,7);
     ctx.fillStyle='#ce5146';ctx.fillRect(sx-size*.30,y-12,size*.60*Math.max(0,e.hp/e.max),5);
     if(e.boss){ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.fillText('BOSS',sx-17,y-20)}
-    if(e===lockedTarget){ctx.strokeStyle='#f3d46a';ctx.lineWidth=3;ctx.strokeRect(sx-size*.39,y+size*.08,size*.78,size*.9)}
+    
   });
   // Shot tracer and hit marker flash
   if(shotFx&&now<shotFx.until&&shotFx.target){
@@ -459,7 +446,7 @@ function render(){
     ctx.beginPath();ctx.moveTo(450,horizon+165);ctx.lineTo(sx,horizon+24);ctx.stroke();ctx.globalAlpha=1;
   }
   // Crosshair
-  ctx.strokeStyle=lockedTarget&&$('autoAim').checked?'#f3d46a':'#f4e7c5';ctx.lineWidth=2;
+  ctx.strokeStyle='#f4e7c5';ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(438,horizon);ctx.lineTo(462,horizon);ctx.moveTo(450,horizon-12);ctx.lineTo(450,horizon+12);ctx.stroke();
   // Simple first-person weapon silhouette and muzzle flash
   ctx.save();ctx.translate(450+cameraKick*8,520+Math.sin(footstepPhase)*2);ctx.fillStyle='#111916';
@@ -492,7 +479,7 @@ function render(){
 }
 function finishGameOver(reason){
   if(!playing)return;
-  playing=false;paused=false;mouseDown=false;waveBreakUntil=0;reloadUntil=0;lockedTarget=null;keys={};
+  playing=false;paused=false;mouseDown=false;waveBreakUntil=0;reloadUntil=0;keys={};
   $('gameOverReason').textContent=reason;
   $('gameOverWave').textContent=level;
   $('gameOverCredits').textContent=coins;
@@ -501,7 +488,7 @@ function finishGameOver(reason){
   $('gameover').style.display='flex';
   say('GAME OVER');
 }
-function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if($('autoAim').checked){lockedTarget=findAutoTarget();if(lockedTarget){const desired=Math.atan2(lockedTarget.y-player.y,lockedTarget.x-player.x),turn=angleDiff(desired,player.a),step=Math.min(Math.abs(turn),5.8*dt);player.a+=Math.sign(turn)*step}}else lockedTarget=null;if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
-function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);if(mouseDown)fire(false);else if($('autoAim').checked&&$('autoFire').checked&&lockedTarget)fire(true);render();hud();requestAnimationFrame(loop)}
+function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
+function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;update(dt);advanceWave(now);if(mouseDown)fire();render();hud();requestAnimationFrame(loop)}
 hud();
 })();
