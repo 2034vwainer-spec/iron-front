@@ -5,10 +5,41 @@ const $=id=>document.getElementById(id),canvas=$('screen'),ctx=canvas.getContext
 let mode='ATTACK',coins=0,level=1,hp=100,armor=0,weapon='PISTOL',ammo=12,reserve=36,playing=false,paused=false,bus=false,last=0,lastShot=0,keys={},enemies=[],enemyBolts=[],player={x:2.5,y:11.5,a:0},baseHp=100,muzzleFlashUntil=0,emptyMessageAt=0,footstepPhase=0,cameraKick=0,shotFx=null,waveBreakUntil=0,reloadUntil=0,mouseHeld=false;
 let peer=null,peerConn=null,onlineRole='',onlineReady=false,remotePlayer=null,lastNetSend=0,roomCodeValue='',connectionTimer=null;
 const remoteStart={host:{x:21.5,y:11.5,a:Math.PI},guest:{x:2.5,y:11.5,a:0}};
-const peerConfig={debug:1,config:{iceServers:[
+const peerConfig={debug:2,config:{iceServers:[
   {urls:'stun:stun.l.google.com:19302'},
   {urls:'stun:stun.cloudflare.com:3478'}
 ],sdpSemantics:'unified-plan'}};
+let turnConfigured=false;
+async function loadTurnRelay(){
+  let host=$('turnHost').value.trim();
+  const apiKey=$('turnApiKey').value.trim();
+  if(host.startsWith('https://'))host=host.slice(8);
+  if(host.startsWith('http://'))host=host.slice(7);
+  host=host.split('/')[0];
+  if(!host||!apiKey){$('turnStatus').textContent='ENTER YOUR TURN APP ADDRESS AND API KEY FIRST.';onlineStatus('TURN RELAY SETUP IS REQUIRED FOR SOME NETWORKS.');return false}
+  if(host.includes(' ')||!host.includes('.')){$('turnStatus').textContent='CHECK THE APP ADDRESS FORMAT.';return false}
+  $('turnStatus').textContent='FETCHING TEMPORARY RELAY CREDENTIALS...';
+  try{
+    const response=await fetch('https://'+host+'/api/v1/turn/credentials?apiKey='+encodeURIComponent(apiKey),{cache:'no-store'});
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    const servers=await response.json();
+    const hasTurn=Array.isArray(servers)&&servers.some(server=>{
+      const urls=Array.isArray(server.urls)?server.urls:[server.urls];
+      return urls.some(url=>typeof url==='string'&&(url.toLowerCase().startsWith('turn:')||url.toLowerCase().startsWith('turns:')));
+    });
+    if(!hasTurn)throw new Error('No TURN server returned');
+    peerConfig.config.iceServers=[...servers,{urls:'stun:stun.l.google.com:19302'}];
+    turnConfigured=true;
+    $('turnStatus').textContent='TURN RELAY READY ON THIS DEVICE.';
+    onlineStatus('RELAY READY — YOU CAN CREATE OR JOIN A ROOM.');
+    return true;
+  }catch(err){
+    turnConfigured=false;
+    $('turnStatus').textContent='TURN SETUP FAILED: CHECK THE APP ADDRESS AND API KEY.';
+    onlineStatus('TURN RELAY COULD NOT BE LOADED. CHECK YOUR PROVIDER SETTINGS.');
+    return false;
+  }
+}
 function onlineStatus(message){$('onlineStatus').textContent=message}
 function sendNet(data){if(peerConn&&peerConn.open)peerConn.send(data)}
 function clearConnectionTimer(){if(connectionTimer){clearTimeout(connectionTimer);connectionTimer=null}}
@@ -107,15 +138,17 @@ function createRoomAttempt(attempt=0){
     peerErrorMessage(err,'host');
   });
 }
-function createOnlineRoom(){
+async function createOnlineRoom(){
   if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE.');return}
+  if(!turnConfigured&&!(await loadTurnRelay()))return;
   closeOnline();show('online');onlineStatus('PREPARING PRIVATE ROOM...');
   $('roomCode').textContent='WAIT...';$('roomStatus').textContent='Waiting for online server confirmation...';
   $('roomCreated').classList.remove('hidden');
   createRoomAttempt();
 }
-function joinOnlineRoom(){
+async function joinOnlineRoom(){
   if(typeof Peer==='undefined'){onlineStatus('ONLINE SERVICE FAILED TO LOAD — REFRESH THE PAGE.');return}
+  if(!turnConfigured&&!(await loadTurnRelay()))return;
   const code=$('joinCode').value.trim().toUpperCase();
   if(!/^[A-Z0-9]{8}$/.test(code)){onlineStatus('ENTER THE FULL 8-CHARACTER ROOM CODE.');return}
   closeOnline();show('online');$('roomCreated').classList.add('hidden');
@@ -140,6 +173,7 @@ $('onlinePlay').onclick=()=>{show('online');onlineStatus('CREATE A ROOM OR JOIN 
 $('onlineBack').onclick=()=>{closeOnline();show('menu')};
 $('createRoom').onclick=createOnlineRoom;
 $('joinRoom').onclick=joinOnlineRoom;
+$('loadTurn').onclick=loadTurnRelay;
 $('copyRoomCode').onclick=()=>{if(!roomCodeValue)return;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(roomCodeValue).then(()=>onlineStatus('ROOM CODE COPIED — SEND IT TO YOUR FRIEND.')).catch(()=>onlineStatus('SELECT THE CODE AND COPY IT MANUALLY.'))}else onlineStatus('SELECT THE CODE AND COPY IT MANUALLY.')};
 
 const guns=[{name:'PISTOL',cost:0,damage:25,clip:12,rate:330},{name:'AK-47',cost:650,damage:22,clip:30,rate:125},{name:'DESERT EAGLE',cost:900,damage:60,clip:7,rate:470},{name:'MACHINE GUN',cost:1600,damage:18,clip:100,rate:45}];
