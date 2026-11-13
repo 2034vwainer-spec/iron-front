@@ -33,12 +33,14 @@
     <button class="mode" data-mode="DEFENSE"><b>03</b><span>DEFENSE</span><small>Protect your base</small></button>
     <button class="mode" data-mode="SURVIVAL"><b>04</b><span>SURVIVAL</span><small>Survive endless waves</small></button>
     <button class="mode" data-mode="DUEL"><b>05</b><span>1V1 DUEL</span><small>Fight another player online</small></button>
-    <button class="mode battle" data-mode="BATTLE ROYALE"><b>06</b><span>BATTLE ROYALE</span><small>Hardest operation</small></button>
+    <button class="mode" data-mode="5V5"><b>06</b><span>5V5 ONLINE</span><small>5 real players vs 5 real players</small></button>
+    <button class="mode battle" data-mode="BATTLE ROYALE"><b>07</b><span>BATTLE ROYALE</span><small>Hardest operation</small></button>
  
 
   <div class="actions">
     <button id="play" class="primary">DEPLOY →</button>
     <button id="onlinePlay">1V1 ONLINE</button>
+    <button id="teamPlay">5V5 ONLINE</button>
     <button id="weapons">WEAPON ARMORY</button>
     <button id="armor">ARMOR SHOP</button>
   </div>
@@ -46,8 +48,8 @@
 </section>
 
 <section id="online" class="panel hidden">
-  <div class="section-head"><div><p class="eyebrow">ONLINE MULTIPLAYER</p><h2>1V1 PRIVATE MATCH</h2></div><button id="onlineBack">← BACK</button></div>
-  <p class="muted">Create a room and share its code, or enter your friend's code to join.</p>
+  <div class="section-head"><div><p class="eyebrow">ONLINE MULTIPLAYER</p><h2 id="onlineTitle">1V1 PRIVATE MATCH</h2></div><button id="onlineBack">← BACK</button></div>
+  <p id="onlineIntro" class="muted">Create a room and share its code, or enter your friend's code to join.</p>
   <div class="turn-setup">
     <h3>INTERNET RELAY SETUP</h3>
     <p class="muted">Each player needs TURN credentials on their own device for networks that block direct connections.</p>
