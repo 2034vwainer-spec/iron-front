@@ -53,6 +53,7 @@ function drawAtmosphere(now,horizon){
 }
 
 let peer=null,peerConn=null,onlineRole='',onlineReady=false,remotePlayer=null,lastNetSend=0,roomCodeValue='',connectionTimer=null;
+let onlineMode='DUEL',teamConnections=new Map(),teamPlayers={},teamStarted=false,myPlayerId='',myTeam='';
 const remoteStart={host:{x:21.5,y:11.5,a:Math.PI},guest:{x:2.5,y:11.5,a:0}};
 const peerConfig={debug:2,config:{iceServers:[
   {urls:'stun:stun.l.google.com:19302'},
@@ -90,10 +91,59 @@ async function loadTurnRelay(){
   }
 }
 function onlineStatus(message){$('onlineStatus').textContent=message}
-function sendNet(data){if(peerConn&&peerConn.open)peerConn.send(data)}
+function sendNet(data){
+  if(onlineMode==='5V5'){
+    if(onlineRole==='host')teamConnections.forEach(c=>{if(c.open)c.send(data)});
+    else if(peerConn&&peerConn.open)peerConn.send(data);
+    return;
+  }
+  if(peerConn&&peerConn.open)peerConn.send(data);
+}
+function teamRoster(){return Object.values(teamPlayers)}
+function teamSpawn(index){return {x:index<5?2.5:21.5,y:4.5+(index%5)*3.7,a:index<5?0:Math.PI}}
+function startTeamMatch(roster){
+  teamPlayers={};roster.forEach(p=>teamPlayers[p.id]={...p});
+  myPlayerId=peer.id;myTeam=teamPlayers[myPlayerId].team;onlineReady=true;teamStarted=true;
+  mode='5V5';level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;configureMap();
+  const me=teamPlayers[myPlayerId];player={x:me.x,y:me.y,a:me.a};ammo=gun().clip;reserve=gun().clip*3;
+  enemies=[];enemyBolts=[];launch();say('5V5 ONLINE — '+myTeam+' TEAM');
+}
+function hostTeamData(conn,data){
+  if(!data||typeof data!=='object')return;
+  if(data.type==='state'&&teamStarted){
+    const p=teamPlayers[conn.peer];if(!p)return;
+    p.x=data.x;p.y=data.y;p.a=data.a;
+    teamBroadcast({type:'teamState',player:p});
+  }else if(data.type==='hit'&&teamStarted){
+    const target=teamPlayers[data.target],attacker=teamPlayers[conn.peer];
+    if(!target||!attacker||target.team===attacker.team||target.hp<=0)return;
+    target.hp=Math.max(0,target.hp-(Number(data.damage)||0));
+    teamBroadcast({type:'teamHealth',id:target.id,hp:target.hp});
+    if(target.hp<=0&&!Object.values(teamPlayers).some(p=>p.team===target.team&&p.hp>0))
+      teamBroadcast({type:'teamOver',winner:attacker.team});
+  }else if(data.type==='leave'){
+    teamConnections.delete(conn.peer);delete teamPlayers[conn.peer];
+    teamBroadcast({type:'teamRoster',players:teamRoster()});
+    onlineStatus('A PLAYER LEFT THE ROOM.');
+  }
+}
+function teamBroadcast(data){teamConnections.forEach(c=>{if(c.open)c.send(data)})}
+function teamClientData(data){
+  if(!data||typeof data!=='object')return;
+  if(data.type==='teamRoster'){
+    teamPlayers={};data.players.forEach(p=>teamPlayers[p.id]={...p});
+    onlineStatus('PLAYERS CONNECTED: '+Object.keys(teamPlayers).length+'/10');
+    if($('roomStatus'))$('roomStatus').textContent='Players: '+Object.keys(teamPlayers).length+'/10';
+  }else if(data.type==='teamStart'){startTeamMatch(data.players)}
+  else if(data.type==='teamState'){teamPlayers[data.player.id]={...data.player}}
+  else if(data.type==='teamHealth'){
+    if(teamPlayers[data.id])teamPlayers[data.id].hp=data.hp;
+    if(data.id===myPlayerId){hp=data.hp;hud();if(hp<=0)finishGameOver('ELIMINATED — SPECTATING TEAM')}
+  }else if(data.type==='teamOver'){finishGameOver(data.winner===myTeam?'YOUR TEAM WON':'YOUR TEAM LOST')}
+}
 function clearConnectionTimer(){if(connectionTimer){clearTimeout(connectionTimer);connectionTimer=null}}
 function closeOnline(){
-  clearConnectionTimer();onlineReady=false;remotePlayer=null;
+  clearConnectionTimer();onlineReady=false;remotePlayer=null;teamStarted=false;teamPlayers={};teamConnections.forEach(c=>{try{c.close()}catch(e){}});teamConnections.clear();
   if(peerConn){try{peerConn.close()}catch(e){}peerConn=null}
   if(peer){try{peer.destroy()}catch(e){}peer=null}
   roomCodeValue='';onlineRole='';
@@ -185,12 +235,41 @@ function createRoomAttempt(attempt=0){
     if(peer!==thisPeer)return;
     clearConnectionTimer();
     roomCodeValue=code;$('roomCode').textContent=code;$('roomCreated').classList.remove('hidden');
-    $('roomStatus').textContent='Room is online. Share this code with one friend.';
-    onlineStatus('ROOM READY — SHARE THE CODE NOW.');
+    if(onlineMode==='5V5'){
+      onlineRole='host';myPlayerId=thisPeer.id;
+      const pos=teamSpawn(0);teamPlayers[myPlayerId]={id:myPlayerId,team:'BLUE',x:pos.x,y:pos.y,a:pos.a,hp:100};
+      $('roomStatus').textContent='Share this code with 9 friends.';
+      onlineStatus('5V5 ROOM READY — WAITING FOR 9 REAL PLAYERS (1/10).');
+    }else{
+      $('roomStatus').textContent='Room is online. Share this code with one friend.';
+      onlineStatus('ROOM READY — SHARE THE CODE NOW.');
+    }
   });
   thisPeer.on('connection',conn=>{
-    if(peer!==thisPeer||peerConn){try{conn.close()}catch(e){}return}
-    setupConnection(conn,'host');
+    if(peer!==thisPeer){try{conn.close()}catch(e){}return}
+    if(onlineMode==='5V5'){
+      if(teamConnections.size>=9){try{conn.close()}catch(e){}return}
+      teamConnections.set(conn.peer,conn);
+      conn.on('open',()=>{
+        const index=teamConnections.size;
+        const pos=teamSpawn(index);
+        teamPlayers[conn.peer]={id:conn.peer,team:index<5?'BLUE':'RED',x:pos.x,y:pos.y,a:pos.a,hp:100};
+        conn.send({type:'teamRoster',players:teamRoster()});
+        teamBroadcast({type:'teamRoster',players:teamRoster()});
+        onlineStatus('PLAYERS CONNECTED: '+(teamConnections.size+1)+'/10 — WAITING FOR '+(9-teamConnections.size)+' MORE');
+        if($('roomStatus'))$('roomStatus').textContent='Players: '+(teamConnections.size+1)+'/10';
+        if(teamConnections.size===9&&!teamStarted){
+          const roster=teamRoster();teamStarted=true;
+          teamBroadcast({type:'teamStart',players:roster});startTeamMatch(roster);
+        }
+      });
+      conn.on('data',data=>hostTeamData(conn,data));
+      conn.on('close',()=>{teamConnections.delete(conn.peer);if(!teamStarted){delete teamPlayers[conn.peer];teamBroadcast({type:'teamRoster',players:teamRoster()})}});
+      conn.on('error',err=>peerErrorMessage(err,'host'));
+    }else{
+      if(peerConn){try{conn.close()}catch(e){}return}
+      setupConnection(conn,'host');
+    }
   });
   connectionTimer=setTimeout(()=>{if(peer===thisPeer&&!thisPeer.open&&!roomCodeValue){peer=null;try{thisPeer.destroy()}catch(e){}onlineStatus('ONLINE SERVER DID NOT RESPOND — TRY CREATE ROOM AGAIN.')}},18000);
   thisPeer.on('error',err=>{
@@ -224,8 +303,14 @@ async function joinOnlineRoom(){
     if(peer!==thisPeer)return;
     clearConnectionTimer();
     onlineStatus('ROOM FOUND — CONNECTING TO PLAYER...');
-    const conn=thisPeer.connect('ironfront-'+code.toLowerCase(),{reliable:true,metadata:{game:'IRON FRONT'}});
-    setupConnection(conn,'guest');
+    const conn=thisPeer.connect('ironfront-'+code.toLowerCase(),{reliable:true,metadata:{game:'IRON FRONT',mode:onlineMode}});
+    if(onlineMode==='5V5'){
+      peerConn=conn;onlineRole='guest';
+      conn.on('open',()=>onlineStatus('CONNECTED — WAITING FOR 10 PLAYERS...'));
+      conn.on('data',teamClientData);
+      conn.on('close',()=>{onlineReady=false;onlineStatus('HOST CONNECTION CLOSED — RETURN TO MENU')});
+      conn.on('error',err=>peerErrorMessage(err,'join'));
+    }else setupConnection(conn,'guest');
   });
   connectionTimer=setTimeout(()=>{if(peer===thisPeer&&!thisPeer.open){peer=null;try{thisPeer.destroy()}catch(e){}onlineStatus('ONLINE SERVER DID NOT RESPOND — REFRESH AND TRY AGAIN.')}},18000);
   thisPeer.on('error',err=>{
@@ -234,7 +319,8 @@ async function joinOnlineRoom(){
     peerErrorMessage(err,'join');
   });
 }
-$('onlinePlay').onclick=()=>{show('online');onlineStatus('CREATE A ROOM OR JOIN WITH A CODE')};
+$('onlinePlay').onclick=()=>{onlineMode='DUEL';$('onlineTitle').textContent='1V1 PRIVATE MATCH';$('onlineIntro').textContent='Create a room and share its code, or enter your friend\'s code to join.';show('online');onlineStatus('CREATE A ROOM OR JOIN WITH A CODE')};
+$('teamPlay').onclick=()=>{onlineMode='5V5';$('onlineTitle').textContent='5V5 TEAM MATCH';$('onlineIntro').textContent='Real players only: 5 BLUE vs 5 RED. The match starts when all 10 players join.';show('online');onlineStatus('CREATE OR JOIN A 5V5 ROOM')};
 $('onlineBack').onclick=()=>{closeOnline();show('menu')};
 $('createRoom').onclick=createOnlineRoom;
 $('joinRoom').onclick=joinOnlineRoom;
@@ -374,7 +460,7 @@ const themes={
   'BATTLE ROYALE':{label:'ABANDONED TOWN',sky:['#192838','#72818a','#c1b89f'],haze:'#d1c8b266',skyline:'#3b4648',road:[73,79,77],ground:[124,119,105],grass:[82,97,69],roadAxis:'cross'}
 };
 function configureMap(){
-  map=buildMap(mode==='DUEL'?'ATTACK':mode);currentTheme=themes[mode]||themes.ATTACK;
+  map=buildMap(mode==='DUEL'||mode==='5V5'?'ATTACK':mode);currentTheme=themes[mode]||themes.ATTACK;
   scenery=(sceneryByMode[mode]||sceneryByMode.ATTACK).filter(p=>!wall(p.x,p.y));
 }
 function free(x,y,r=.18){return !wall(x-r,y-r)&&!wall(x+r,y-r)&&!wall(x-r,y+r)&&!wall(x+r,y+r)}
@@ -383,7 +469,7 @@ function openShop(type){$('shopTitle').textContent=type==='WEAPON'?'WEAPON ARMOR
 $('weapons').onclick=()=>openShop('WEAPON');$('armor').onclick=()=>openShop('ARMOR');$('back').onclick=()=>show('menu');
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('selected',x===b));say('SELECTED OPERATION: '+mode)});
 function waveSize(wave=level){
-  if(mode==='DUEL')return 0;
+  if(mode==='DUEL'||mode==='5V5')return 0;
   const base={ATTACK:5,ADVANCE:5,DEFENSE:6,SURVIVAL:8,'BATTLE ROYALE':12}[mode]||5;
   return Math.min(22,base+Math.floor((wave-1)*1.45));
 }
@@ -426,8 +512,8 @@ function advanceWave(now){
   say(mode==='DUEL'?'ROUND '+level+' — ONE OPPONENT':'WAVE '+level+' — '+count+' HOSTILES INCOMING');
   hud();
 }
-function start(){level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(waveSize(1));launch()}
-function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=(mode==='DUEL'?'1V1 DUEL':mode)+' / '+currentTheme.label;last=performance.now();hud();say(mode==='DUEL'?'1V1 DUEL — DEFEAT THE OPPONENT':'MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
+function start(){if(mode==='5V5'){onlineMode='5V5';show('online');onlineStatus('CREATE OR JOIN A ROOM — 10 REAL PLAYERS REQUIRED');return}level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(waveSize(1));launch()}
+function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=(mode==='DUEL'?'1V1 DUEL':mode==='5V5'?'5V5 ONLINE':mode)+' / '+currentTheme.label;last=performance.now();hud();say(mode==='DUEL'?'1V1 DUEL — DEFEAT THE OPPONENT':mode==='5V5'?'5V5 ONLINE — BLUE VS RED':'MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
 $('play').onclick=()=>{if(mode==='DUEL'){show('online');onlineStatus('CREATE A ROOM OR JOIN WITH A CODE')}else start()};$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
 $('quit').onclick=()=>{playing=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED')};
 $('retryGame').onclick=()=>{if(mode==='DUEL'){if(!onlineReady||!peerConn||!peerConn.open){onlineStatus('CONNECTION LOST — CREATE A NEW ROOM TO PLAY AGAIN.');closeOnline();show('online');return}sendNet({type:'rematch'});startOnlineRematch()}else start()};$('gameOverMenu').onclick=()=>{playing=false;paused=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
@@ -473,6 +559,14 @@ function fire(){
     const d=Math.hypot(remotePlayer.x-player.x,remotePlayer.y-player.y),a=Math.atan2(remotePlayer.y-player.y,remotePlayer.x-player.x),diff=Math.abs(angleDiff(a,player.a));
     if(d<14&&diff<=Math.atan2(.20,d)&&!blocked(player.x,player.y,remotePlayer.x,remotePlayer.y)){sendNet({type:'hit',damage:gun().damage});say('HIT — '+gun().damage+' DAMAGE');}
     else say('SHOT FIRED — NO TARGET HIT');
+  }else if(mode==='5V5'&&onlineReady){
+    let hit=null,best=Infinity;
+    Object.values(teamPlayers).forEach(p=>{
+      if(p.id===myPlayerId||p.team===myTeam||p.hp<=0)return;
+      const d=Math.hypot(p.x-player.x,p.y-player.y),a=Math.atan2(p.y-player.y,p.x-player.x),diff=Math.abs(angleDiff(a,player.a));
+      if(d<14&&diff<=Math.atan2(.20,d)&&diff<best&&!blocked(player.x,player.y,p.x,p.y)){best=diff;hit=p}
+    });
+    if(hit){sendNet({type:'hit',target:hit.id,damage:gun().damage});say('HIT — ENEMY TEAM')}else say('SHOT FIRED — NO ENEMY HIT');
   }else if(target){
     target.hp-=gun().damage;say('HIT — '+gun().damage+' DAMAGE');
     if(target.hp<=0){
@@ -729,6 +823,23 @@ function render(){
     if(e.boss){ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.fillText('BOSS',sx-17,y-20)}
     
   });
+  // Draw other real players in the 5v5 match.
+  if(mode==='5V5'&&onlineReady){
+    Object.values(teamPlayers).forEach(p=>{
+      if(p.id===myPlayerId||p.hp<=0)return;
+      const dx=p.x-player.x,dy=p.y-player.y,d=Math.hypot(dx,dy);let a=Math.atan2(dy,dx)-player.a;a=Math.atan2(Math.sin(a),Math.cos(a));
+      if(Math.abs(a)>.66||d<.2)return;
+      const sx=450+a/1.25*900;if(sx<0||sx>=900||d>depth[Math.floor(sx)]||blocked(player.x,player.y,p.x,p.y))return;
+      const size=Math.min(210,350/d),y=horizon-size*.56,w=size*.46;
+      ctx.fillStyle='#07100d99';ctx.beginPath();ctx.ellipse(sx,y+size*.94,w*.7,size*.08,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.team==='BLUE'?'#315f9a':'#9a3939';ctx.fillRect(sx-w*.34,y+size*.39,w*.68,size*.39);
+      ctx.fillStyle='#9b8d72';ctx.beginPath();ctx.arc(sx,y+size*.25,size*.105,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#27313c';ctx.beginPath();ctx.arc(sx,y+size*.21,size*.15,Math.PI,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 10px monospace';ctx.fillText(p.team,sx-14,y-20);
+      ctx.fillStyle='#08100e';ctx.fillRect(sx-size*.31,y-13,size*.62,7);
+      ctx.fillStyle=p.team==='BLUE'?'#62a8e8':'#e36a62';ctx.fillRect(sx-size*.30,y-12,size*.60*Math.max(0,p.hp/100),5);
+    });
+  }
   // Render the connected human opponent as a distinct field character.
   if(mode==='DUEL'&&onlineReady&&remotePlayer){
     const dx=remotePlayer.x-player.x,dy=remotePlayer.y-player.y,d=Math.hypot(dx,dy);
@@ -825,6 +936,9 @@ function finishGameOver(reason){
   say('GAME OVER');
 }
 function update(dt){let speed=2.8*dt*(keys.shift?1.5:1),f=(keys.w?1:0)-(keys.s?1:0),s=(keys.d?1:0)-(keys.a?1:0);if(keys.arrowleft)player.a-=2*dt;if(keys.arrowright)player.a+=2*dt;let dx=(Math.cos(player.a)*f-Math.sin(player.a)*s)*speed,dy=(Math.sin(player.a)*f+Math.cos(player.a)*s)*speed;if(free(player.x+dx,player.y))player.x+=dx;if(free(player.x,player.y+dy))player.y+=dy;enemies.forEach(e=>{let dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);if(d>.75&&!blocked(e.x,e.y,player.x,player.y)){let nx=e.x+dx/d*e.speed*dt,ny=e.y+dy/d*e.speed*dt;if(free(nx,e.y,.14))e.x=nx;if(free(e.x,ny,.14))e.y=ny}if(d<.8&&Math.random()<dt*.7){let damage=Math.max(1,5*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage}if(d<11&&d>.9&&performance.now()>=e.nextShot&&!blocked(e.x,e.y,player.x,player.y)){const a=Math.atan2(player.y-e.y,player.x-e.x);enemyBolts.push({x:e.x,y:e.y,vx:Math.cos(a)*5.2,vy:Math.sin(a)*5.2,life:2.5});e.nextShot=performance.now()+(e.boss?1250:2050)+Math.random()*650}});enemyBolts=enemyBolts.filter(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(wall(b.x,b.y)||b.life<=0)return false;if(Math.hypot(b.x-player.x,b.y-player.y)<.25){const damage=Math.max(2,8*(1-armor/100));if(mode==='DEFENSE')baseHp-=damage;else hp-=damage;return false}return true});if(f||s)footstepPhase+=dt*12;cameraKick=Math.max(0,cameraKick-dt*2.8);if(hp<=0||baseHp<=0){finishGameOver(hp<=0?'PLAYER DOWN':'BASE DESTROYED')}}
-function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;if(mouseHeld&&weapon==='MACHINE GUN')fire();update(dt);if(mode==='DUEL'&&onlineReady&&now-lastNetSend>50){sendNet({type:'state',x:player.x,y:player.y,a:player.a,hp});lastNetSend=now}advanceWave(now);render();hud();requestAnimationFrame(loop)}
+function loop(now){if(!playing||paused)return;finishReload(now);let dt=Math.min(.04,(now-last)/1000||.016);last=now;if(mouseHeld&&weapon==='MACHINE GUN')fire();update(dt);
+if(mode==='DUEL'&&onlineReady&&now-lastNetSend>50){sendNet({type:'state',x:player.x,y:player.y,a:player.a,hp});lastNetSend=now}
+else if(mode==='5V5'&&onlineReady&&now-lastNetSend>50){const me=teamPlayers[myPlayerId];if(me){me.x=player.x;me.y=player.y;me.a=player.a;sendNet({type:'state',x:player.x,y:player.y,a:player.a})}lastNetSend=now}
+advanceWave(now);render();hud();requestAnimationFrame(loop)}
 hud();
 })();
