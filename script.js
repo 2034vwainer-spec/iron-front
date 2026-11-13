@@ -115,6 +115,20 @@ function peerErrorMessage(err,phase){
   };
   onlineStatus(messages[type]||('CONNECTION FAILED ('+type+'). '+(phase==='join'?'CHECK THE CODE AND TRY AGAIN.':'CREATE A NEW ROOM.')));
 }
+function startOnlineRematch(){
+  if(!onlineReady||!peerConn||!peerConn.open){
+    onlineStatus('CONNECTION LOST — CREATE A NEW ROOM TO PLAY AGAIN.');
+    return;
+  }
+  playing=false;paused=false;mouseHeld=false;waveBreakUntil=0;reloadUntil=0;
+  level=1;hp=100;baseHp=100;ammo=gun().clip;reserve=gun().clip*3;
+  configureMap();
+  player={...remoteStart[onlineRole]};
+  remotePlayer={...remoteStart[onlineRole==='host'?'guest':'host'],hp:100,a:onlineRole==='host'?Math.PI:0};
+  enemies=[];enemyBolts=[];lastShot=0;shotFx=null;keys={};
+  launch();
+  say('REMATCH — ROUND 1. GOOD LUCK!');
+}
 function enterOnlineGame(role){
   onlineRole=role;onlineReady=true;level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;
   configureMap();player={...remoteStart[role]};ammo=gun().clip;reserve=gun().clip*3;
@@ -146,6 +160,8 @@ function setupConnection(conn,role){
     }else if(data.type==='hit'){
       hp=Math.max(0,hp-(Number(data.damage)||0));hud();
       if(hp<=0){sendNet({type:'won'});finishGameOver('DEFEATED IN ONLINE DUEL')}
+    }else if(data.type==='rematch'){
+      if(!playing)startOnlineRematch();
     }else if(data.type==='won'){
       finishGameOver('YOU WON THE ONLINE DUEL')
     }else if(data.type==='leave'){
@@ -414,7 +430,7 @@ function start(){level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;config
 function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=(mode==='DUEL'?'1V1 DUEL':mode)+' / '+currentTheme.label;last=performance.now();hud();say(mode==='DUEL'?'1V1 DUEL — DEFEAT THE OPPONENT':'MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
 $('play').onclick=()=>{if(mode==='DUEL'){show('online');onlineStatus('CREATE A ROOM OR JOIN WITH A CODE')}else start()};$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
 $('quit').onclick=()=>{playing=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED')};
-$('retryGame').onclick=()=>{if(mode==='DUEL'){onlineStatus('CREATE A NEW ROOM TO PLAY AGAIN');closeOnline();show('online')}else start()};$('gameOverMenu').onclick=()=>{playing=false;paused=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
+$('retryGame').onclick=()=>{if(mode==='DUEL'){if(!onlineReady||!peerConn||!peerConn.open){onlineStatus('CONNECTION LOST — CREATE A NEW ROOM TO PLAY AGAIN.');closeOnline();show('online');return}sendNet({type:'rematch'});startOnlineRematch()}else start()};$('gameOverMenu').onclick=()=>{playing=false;paused=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
 function reload(){
   const now=performance.now();
@@ -787,6 +803,7 @@ function render(){
 function finishGameOver(reason){
   if(!playing)return;
   playing=false;paused=false;mouseHeld=false;waveBreakUntil=0;reloadUntil=0;keys={};
+  $('retryGame').textContent=mode==='DUEL'?'REMATCH ↻':'TRY AGAIN ↻';
   $('gameOverReason').textContent=reason;
   $('gameOverWave').textContent=level;
   $('gameOverCredits').textContent=coins;
