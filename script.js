@@ -127,6 +127,7 @@ function teamDamage(attackerId,targetId,damage){
   const target=teamPlayers[targetId],attacker=teamPlayers[attackerId];
   if(!target||!attacker||target.team===attacker.team||target.hp<=0)return;
   target.hp=Math.max(0,target.hp-(Number(damage)||0));
+  if(target.id===myPlayerId){hp=target.hp;hud();if(hp<=0)finishGameOver('ELIMINATED — SPECTATING TEAM')}
   const update={type:'teamHealth',id:target.id,hp:target.hp};
   if(onlineRole==='host')teamBroadcast(update);else sendNet(update);
   if(target.hp<=0&&!Object.values(teamPlayers).some(p=>p.team===target.team&&p.hp>0)){
@@ -522,8 +523,8 @@ function advanceWave(now){
 function start(){if(mode==='5V5'){onlineMode='5V5';show('online');onlineStatus('CREATE OR JOIN A ROOM — 10 REAL PLAYERS REQUIRED');return}level=1;waveBreakUntil=0;reloadUntil=0;hp=100;baseHp=100;configureMap();player={...(spawnPoints[mode]||spawnPoints.ATTACK)};ammo=gun().clip;reserve=gun().clip*3;bus=mode==='BATTLE ROYALE';if(bus){show('bus');return}spawn(waveSize(1));launch()}
 function launch(){bus=false;playing=true;paused=false;show('game');$('modeLabel').textContent=(mode==='DUEL'?'1V1 DUEL':mode==='5V5'?'5V5 ONLINE':mode)+' / '+currentTheme.label;last=performance.now();hud();say(mode==='DUEL'?'1V1 DUEL — DEFEAT THE OPPONENT':mode==='5V5'?'5V5 ONLINE — BLUE VS RED':'MISSION LIVE — ELIMINATE HOSTILES');requestAnimationFrame(loop)}
 $('play').onclick=()=>{if(mode==='DUEL'){show('online');onlineStatus('CREATE A ROOM OR JOIN WITH A CODE')}else start()};$('jump').onclick=()=>{level=1;waveBreakUntil=0;spawn(waveSize(1));launch();say('BATTLE ROYALE — WAVE 1: SURVIVE THE DROP')};
-$('quit').onclick=()=>{playing=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED')};
-$('retryGame').onclick=()=>{if(mode==='DUEL'){if(!onlineReady||!peerConn||!peerConn.open){onlineStatus('CONNECTION LOST — CREATE A NEW ROOM TO PLAY AGAIN.');closeOnline();show('online');return}sendNet({type:'rematch'});startOnlineRematch()}else start()};$('gameOverMenu').onclick=()=>{playing=false;paused=false;if(mode==='DUEL'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
+$('quit').onclick=()=>{playing=false;if(mode==='DUEL'||mode==='5V5'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED')};
+$('retryGame').onclick=()=>{if(mode==='5V5'){closeOnline();onlineMode='5V5';show('online');onlineStatus('CREATE A NEW 5V5 ROOM TO PLAY AGAIN.');return}if(mode==='DUEL'){if(!onlineReady||!peerConn||!peerConn.open){onlineStatus('CONNECTION LOST — CREATE A NEW ROOM TO PLAY AGAIN.');closeOnline();show('online');return}sendNet({type:'rematch'});startOnlineRematch()}else start()};$('gameOverMenu').onclick=()=>{playing=false;paused=false;if(mode==='DUEL'||mode==='5V5'){sendNet({type:'leave'});closeOnline()}show('menu');say('MISSION ENDED — SELECT A NEW OPERATION')};
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'RESUME':'PAUSE';if(!paused){last=performance.now();requestAnimationFrame(loop)}};
 function reload(){
   const now=performance.now();
