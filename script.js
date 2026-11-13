@@ -115,12 +115,7 @@ function hostTeamData(conn,data){
     p.x=data.x;p.y=data.y;p.a=data.a;
     teamBroadcast({type:'teamState',player:p});
   }else if(data.type==='hit'&&teamStarted){
-    const target=teamPlayers[data.target],attacker=teamPlayers[conn.peer];
-    if(!target||!attacker||target.team===attacker.team||target.hp<=0)return;
-    target.hp=Math.max(0,target.hp-(Number(data.damage)||0));
-    teamBroadcast({type:'teamHealth',id:target.id,hp:target.hp});
-    if(target.hp<=0&&!Object.values(teamPlayers).some(p=>p.team===target.team&&p.hp>0))
-      teamBroadcast({type:'teamOver',winner:attacker.team});
+    teamDamage(conn.peer,data.target,data.damage);
   }else if(data.type==='leave'){
     teamConnections.delete(conn.peer);delete teamPlayers[conn.peer];
     teamBroadcast({type:'teamRoster',players:teamRoster()});
@@ -128,6 +123,18 @@ function hostTeamData(conn,data){
   }
 }
 function teamBroadcast(data){teamConnections.forEach(c=>{if(c.open)c.send(data)})}
+function teamDamage(attackerId,targetId,damage){
+  const target=teamPlayers[targetId],attacker=teamPlayers[attackerId];
+  if(!target||!attacker||target.team===attacker.team||target.hp<=0)return;
+  target.hp=Math.max(0,target.hp-(Number(damage)||0));
+  const update={type:'teamHealth',id:target.id,hp:target.hp};
+  if(onlineRole==='host')teamBroadcast(update);else sendNet(update);
+  if(target.hp<=0&&!Object.values(teamPlayers).some(p=>p.team===target.team&&p.hp>0)){
+    const result={type:'teamOver',winner:attacker.team};
+    if(onlineRole==='host')teamBroadcast(result);
+    finishGameOver(attacker.team===myTeam?'YOUR TEAM WON':'YOUR TEAM LOST');
+  }
+}
 function teamClientData(data){
   if(!data||typeof data!=='object')return;
   if(data.type==='teamRoster'){
@@ -566,7 +573,7 @@ function fire(){
       const d=Math.hypot(p.x-player.x,p.y-player.y),a=Math.atan2(p.y-player.y,p.x-player.x),diff=Math.abs(angleDiff(a,player.a));
       if(d<14&&diff<=Math.atan2(.20,d)&&diff<best&&!blocked(player.x,player.y,p.x,p.y)){best=diff;hit=p}
     });
-    if(hit){sendNet({type:'hit',target:hit.id,damage:gun().damage});say('HIT — ENEMY TEAM')}else say('SHOT FIRED — NO ENEMY HIT');
+    if(hit){if(onlineRole==='host')teamDamage(myPlayerId,hit.id,gun().damage);else sendNet({type:'hit',target:hit.id,damage:gun().damage});say('HIT — ENEMY TEAM')}else say('SHOT FIRED — NO ENEMY HIT');
   }else if(target){
     target.hp-=gun().damage;say('HIT — '+gun().damage+' DAMAGE');
     if(target.hp<=0){
@@ -913,6 +920,7 @@ function render(){
     ctx.beginPath();ctx.arc(ex,ey,e.boss?4.8:3.2,0,Math.PI*2);ctx.fill();
     if(e.boss){ctx.strokeStyle='#ffe0a0';ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(ex,ey,7,0,Math.PI*2);ctx.stroke()}
   });
+  if(mode==='5V5')Object.values(teamPlayers).forEach(p=>{if(p.id===myPlayerId||p.hp<=0)return;ctx.fillStyle=p.team==='BLUE'?'#62a8e8':'#e36a62';ctx.beginPath();ctx.arc(mx+p.x*cell,my+p.y*cell,3.2,0,Math.PI*2);ctx.fill()});
   const px=mx+player.x*cell,py=my+player.y*cell;
   ctx.strokeStyle='#f0d57c';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+Math.cos(player.a)*10,py+Math.sin(player.a)*10);ctx.stroke();
   ctx.fillStyle='#ffe49a';ctx.beginPath();ctx.arc(px,py,3.5,0,Math.PI*2);ctx.fill();
