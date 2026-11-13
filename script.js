@@ -786,7 +786,7 @@ function render(){
   const vignette=ctx.createRadialGradient(450,260,170,450,260,560);
   vignette.addColorStop(0,'#00000000');vignette.addColorStop(1,'#050a08aa');
   ctx.fillStyle=vignette;ctx.fillRect(0,0,900,520);
-  // Compact map overview: buildings and your current position, without revealing opponents
+  // Minimap: player position plus live enemy positions
   const mm=150,mx=900-mm-18,my=18,cell=mm/map[0].length;
   ctx.save();ctx.fillStyle='#08110ed9';ctx.fillRect(mx-7,my-7,mm+14,mm+14);
   ctx.strokeStyle='#9ba88c';ctx.lineWidth=2;ctx.strokeRect(mx-7,my-7,mm+14,mm+14);
@@ -795,9 +795,21 @@ function render(){
     else if(tile==='2')ctx.fillStyle='#687d7c';else if(tile==='3')ctx.fillStyle='#8a7658';else ctx.fillStyle='#66735e';
     ctx.fillRect(mx+gx*cell,my+gy*cell,cell+.3,cell+.3);
   }
+  // Red dots are enemies; bosses use a larger orange marker.
+  enemies.forEach(e=>{
+    const ex=mx+e.x*cell,ey=my+e.y*cell;
+    ctx.fillStyle=e.boss?'#ffad42':'#ff514d';
+    ctx.beginPath();ctx.arc(ex,ey,e.boss?4.8:3.2,0,Math.PI*2);ctx.fill();
+    if(e.boss){ctx.strokeStyle='#ffe0a0';ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(ex,ey,7,0,Math.PI*2);ctx.stroke()}
+  });
   const px=mx+player.x*cell,py=my+player.y*cell;
   ctx.strokeStyle='#f0d57c';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+Math.cos(player.a)*10,py+Math.sin(player.a)*10);ctx.stroke();
-  ctx.fillStyle='#ffe49a';ctx.beginPath();ctx.arc(px,py,3.5,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.fillStyle='#ffe49a';ctx.beginPath();ctx.arc(px,py,3.5,0,Math.PI*2);ctx.fill();
+  // Minimap legend
+  ctx.font='10px monospace';ctx.fillStyle='#ffe49a';ctx.fillText('YOU',mx,my+mm+17);
+  ctx.fillStyle='#ff625d';ctx.fillText('ENEMIES',mx+35,my+mm+17);
+  ctx.fillStyle='#ffad42';ctx.fillText('BOSS',mx+99,my+mm+17);
+  ctx.restore();
   if(mode==='DEFENSE'){ctx.fillStyle='#c7a75e';ctx.fillRect(360,345,180,35);ctx.fillStyle='#fff';ctx.font='12px monospace';ctx.fillText('YOUR BASE',414,367)}
 }
 function finishGameOver(reason){
